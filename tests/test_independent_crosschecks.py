@@ -37,7 +37,11 @@ def test_unlevered_npv_matches_direct_discounted_cash_flow_sum():
     acquisition = deal.purchase_price * (1 + deal.acquisition_cost_pct)
     noi = [deal.annual_noi * (1 + deal.annual_noi_growth) ** year for year in range(deal.hold_years)]
     exit_value = noi[-1] / deal.exit_cap_rate
-    unlevered = [-acquisition] + noi[:-1] + [noi[-1] + exit_value * (1 - deal.selling_cost_pct)]
+    unlevered = [
+        -acquisition,
+        *noi[:-1],
+        noi[-1] + exit_value * (1 - deal.selling_cost_pct),
+    ]
     expected = sum(flow / (1 + deal.discount_rate) ** period for period, flow in enumerate(unlevered))
     # The public output is the unlevered NPV; cash flows are checked separately
     # above through the fixed-case construction.

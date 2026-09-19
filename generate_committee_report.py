@@ -1,10 +1,10 @@
 """Generate a deterministic, downside-first Investment Committee screening package."""
 from __future__ import annotations
 
-from io import BytesIO
-from pathlib import Path
 import json
 import zipfile
+from io import BytesIO
+from pathlib import Path
 
 from src.advanced_underwriting import monte_carlo_underwriting, risk_summary, stress_test
 from src.atlasre import DealInputs, underwrite_deal
@@ -12,8 +12,14 @@ from src.committee_analytics import investment_committee_summary
 from src.governance import default_lineage, lineage_json, model_run_fingerprint, versioned_assumptions
 from src.ic_workflow import DealCase, screen_case
 from src.institutional import MonthlyDevelopmentInputs, monthly_development_model
-from src.lease import LeaseUnderwritingInputs, annual_lease_summary, illustrative_rent_roll, lease_rollup, lease_summary, underwrite_with_lease_roll
-
+from src.lease import (
+    LeaseUnderwritingInputs,
+    annual_lease_summary,
+    illustrative_rent_roll,
+    lease_rollup,
+    lease_summary,
+    underwrite_with_lease_roll,
+)
 
 MODEL_VERSION = "deterministic-core-v0.10"
 
@@ -100,7 +106,7 @@ def build_screening_package(
     simulations_df = monte_carlo_underwriting(case_deal, simulations=simulations, seed=42)
     risk = risk_summary(simulations_df)
     stress = stress_test(case_deal)
-    monthly_development, development_summary = monthly_development_model(
+    monthly_development, _development_summary = monthly_development_model(
         MonthlyDevelopmentInputs(5_000_000, 12_000_000, 2_500_000)
     )
     assumptions = versioned_assumptions(

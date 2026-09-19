@@ -1,9 +1,9 @@
 """Transparent real-estate underwriting and market intelligence primitives."""
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from math import isfinite
-from typing import Iterable
 
 import numpy as np
 import pandas as pd
@@ -88,7 +88,11 @@ def underwrite_deal(deal: DealInputs) -> dict[str, float | list[float]]:
     noi = [deal.annual_noi * (1 + deal.annual_noi_growth) ** year for year in range(deal.hold_years)]
     exit_value = noi[-1] / deal.exit_cap_rate
     selling_cost = exit_value * deal.selling_cost_pct
-    unlevered_flows = [-acquisition] + noi[:-1] + [noi[-1] + exit_value - selling_cost]
+    unlevered_flows = [
+        -acquisition,
+        *noi[:-1],
+        noi[-1] + exit_value - selling_cost,
+    ]
     unlevered_irr = _irr(unlevered_flows)
     discount_flows = _npv(deal.discount_rate, np.asarray(unlevered_flows, dtype=float))
     annual_debt_service = 0.0
@@ -135,20 +139,40 @@ def underwrite_deal(deal: DealInputs) -> dict[str, float | list[float]]:
     }
 
 
-def scenario_matrix(base: DealInputs, growth_rates=(0.0, 0.03, 0.06), exit_caps=(0.05, 0.06, 0.08)) -> pd.DataFrame:
+def scenario_matrix(
+    base: DealInputs,
+    growth_rates=(0.0, 0.03, 0.06),
+    exit_caps=(0.05, 0.06, 0.08),
+) -> pd.DataFrame:
+    """Build a grid of growth and exit-cap assumptions for comparison."""
     if not growth_rates or not exit_caps:
         raise ValueError("scenario grids cannot be empty")
-    rows = []
+    rows: list[dict[str, float]] = []
     for growth in growth_rates:
         for exit_cap in exit_caps:
-            deal = DealInputs(**{**base.__dict__, "annual_noi_growth": float(growth), "exit_cap_rate": float(exit_cap)})
+            deal = DealInputs(
+                **{
+                    **base.__dict__,
+                    "annual_noi_growth": float(growth),
+                    "exit_cap_rate": float(exit_cap),
+                }
+            )
             result = underwrite_deal(deal)
-            rows.append({"noi_growth": growth, "exit_cap_rate": exit_cap, "levered_irr": result["levered_irr"], "unlevered_irr": result["unlevered_irr"], "exit_value": result["exit_value"], "npv": result["unlevered_npv"]})
+            rows.append(
+                {
+                    "noi_growth": float(growth),
+                    "exit_cap_rate": float(exit_cap),
+                    "levered_irr": result["levered_irr"],
+                    "unlevered_irr": result["unlevered_irr"],
+                    "exit_value": result["exit_value"],
+                    "npv": result["unlevered_npv"],
+                }
+            )
     return pd.DataFrame(rows)
 
 
 def market_score(market: dict[str, float], weights: dict[str, float] | None = None) -> dict[str, float]:
-    """Return one risk-adjusted composite score on a 0–100 scale.
+    """Return one risk-adjusted composite score on a 0-100 scale.
 
     ``risk`` is a downside factor, so it enters exactly once as ``1 - risk``
     under its configured weight. ``risk_adjusted_score`` is retained as a

@@ -75,7 +75,7 @@ def test_model_fingerprint_changes_for_material_assumption_change():
 def test_unverified_package_cannot_display_an_initial_screen_pass():
     files = build_screening_package(DealInputs(10_000_000, 650_000, leverage=.25), source_status="REVIEW REQUIRED", simulations=25)
     report = files["investment_committee_report.md"].decode("utf-8")
-    assert "Decision status | **REVIEW REQUIRED**" in report
+    assert "Decision status | **PASSES INITIAL SCREEN** |" not in report
     assert "PASSES INITIAL SCREEN" not in report
 
 

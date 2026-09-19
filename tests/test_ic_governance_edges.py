@@ -5,7 +5,7 @@ from src.ic_workflow import DealCase, ScreeningThresholds, compare_deals, screen
 
 
 def test_unverified_case_cannot_pass_even_when_metrics_pass():
-    inputs = DealInputs(10_000_000, 650_000, leverage=0.25)
+    inputs = DealInputs(10_000_000, 650_000, leverage=0.25, discount_rate=0.05)
     unverified = screen_case(DealCase("A", "Unverified", inputs, "REVIEW REQUIRED"))
     verified = screen_case(DealCase("A", "Verified", inputs, "VERIFIED"))
     assert unverified["status"] == "REVIEW REQUIRED"

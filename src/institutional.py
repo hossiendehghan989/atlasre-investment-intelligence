@@ -6,8 +6,9 @@ presented as project or equity IRR.
 """
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable
+from itertools import pairwise
 
 import numpy as np
 import pandas as pd
@@ -149,7 +150,7 @@ def multi_tier_waterfall(equity: float, total_distributable_cash: float, pref_ra
     ordered = list(tiers)
     if not ordered or any(t.hurdle_rate <= pref_rate or not 0 <= t.promote_pct < 1 for t in ordered):
         raise ValueError("tiers must be non-empty, above pref, and have valid promote percentages")
-    if any(left.hurdle_rate >= right.hurdle_rate for left, right in zip(ordered, ordered[1:])):
+    if any(left.hurdle_rate >= right.hurdle_rate for left, right in pairwise(ordered)):
         raise ValueError("waterfall tiers must be strictly increasing")
     cash_remaining = float(total_distributable_cash)
     return_of_capital = min(equity, cash_remaining)
@@ -188,4 +189,4 @@ def assumption_quality(inputs: dict[str, float | str | int]) -> pd.DataFrame:
     return pd.DataFrame([{"assumption": name, "value": value, "status": "REVIEW REQUIRED", "source": "Not supplied; illustrative input"} for name, value in inputs.items()])
 
 
-__all__ = ["MonthlyDevelopmentInputs", "WaterfallTier", "monthly_development_model", "size_debt", "multi_tier_waterfall", "lp_gp_waterfall", "assumption_quality"]
+__all__ = ["MonthlyDevelopmentInputs", "WaterfallTier", "assumption_quality", "lp_gp_waterfall", "monthly_development_model", "multi_tier_waterfall", "size_debt"]

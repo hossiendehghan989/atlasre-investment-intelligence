@@ -1,6 +1,6 @@
 import pandas as pd
 
-from src.governance import audit_event, assumption_register, verify_audit_chain
+from src.governance import assumption_register, audit_event, verify_audit_chain
 from src.portfolio import portfolio_allocation, portfolio_snapshot
 
 

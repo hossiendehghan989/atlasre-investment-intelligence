@@ -1,9 +1,9 @@
 """Typed committee workflow, comparison, and downside-first memo generation."""
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import datetime, timezone
 import math
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any, Literal, TypedDict
 
 import pandas as pd
@@ -11,7 +11,6 @@ import pandas as pd
 from .atlasre import DealInputs, underwrite_deal
 from .committee_analytics import investment_committee_summary
 from .governance import assumption_register, default_lineage, model_run_fingerprint
-
 
 DecisionStatus = Literal["PASSES INITIAL SCREEN", "REVIEW REQUIRED", "REJECT / REWORK"]
 
@@ -146,7 +145,7 @@ def generate_ic_memo(
 
 **Deal ID:** {case.deal_id}  
 **Prepared by:** {author}  
-**As of:** {datetime.now(timezone.utc).date().isoformat()}  
+**As of:** {datetime.now(UTC).date().isoformat()}
 **Source status:** **{case.source_status}**
 **Decision status:** **{screen['status']}**
 **Model-run fingerprint:** `{fingerprint}`
@@ -194,4 +193,4 @@ The assumption register carries stable IDs, version, source status, and superses
 """
 
 
-__all__ = ["DealCase", "ScreeningThresholds", "screen_case", "compare_deals", "screening_flags", "generate_ic_memo"]
+__all__ = ["DealCase", "ScreeningThresholds", "compare_deals", "generate_ic_memo", "screen_case", "screening_flags"]

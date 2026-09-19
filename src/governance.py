@@ -1,11 +1,12 @@
 """Governance primitives for transparent, reviewable investment decisions."""
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
 import hashlib
 import json
-from typing import Any, Iterable, TypedDict
+from collections.abc import Iterable
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
+from typing import Any, TypedDict
 
 import pandas as pd
 
@@ -118,7 +119,7 @@ def audit_event(action: str, actor: str, payload: dict[str, Any], previous_hash:
     if not action or not actor or not isinstance(payload, dict) or not previous_hash:
         raise ValueError("audit action, actor, payload, and previous hash are required")
     event: dict[str, Any] = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "action": action,
         "actor": actor,
         "payload": payload,
@@ -211,7 +212,16 @@ def model_run_fingerprint(model_version: str, assumptions: pd.DataFrame, lineage
 
 
 __all__ = [
-    "Assumption", "AuditEvent", "LineageRecord", "versioned_assumptions", "assumption_register",
-    "lineage_record", "audit_event", "verify_audit_chain", "ic_workflow", "default_lineage",
-    "lineage_json", "model_run_fingerprint",
+    "Assumption",
+    "AuditEvent",
+    "LineageRecord",
+    "assumption_register",
+    "audit_event",
+    "default_lineage",
+    "ic_workflow",
+    "lineage_json",
+    "lineage_record",
+    "model_run_fingerprint",
+    "verify_audit_chain",
+    "versioned_assumptions",
 ]

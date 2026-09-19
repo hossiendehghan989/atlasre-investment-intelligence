@@ -3,7 +3,7 @@ import pytest
 
 from src.advanced_underwriting import monte_carlo_underwriting, risk_summary, stress_test
 from src.atlasre import DealInputs
-from src.institutional import MonthlyDevelopmentInputs, WaterfallTier, multi_tier_waterfall, monthly_development_model
+from src.institutional import MonthlyDevelopmentInputs, WaterfallTier, monthly_development_model, multi_tier_waterfall
 
 
 def test_multi_tier_waterfall_balances_and_only_promotes_residual_profit():

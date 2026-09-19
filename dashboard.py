@@ -10,10 +10,8 @@ from src.committee_analytics import investment_committee_summary, sensitivity_ta
 from src.debt import DebtTerms, monthly_debt_schedule, size_debt_from_constraints
 from src.governance import default_lineage, lineage_json, model_run_fingerprint, versioned_assumptions
 from src.ic_workflow import DealCase, compare_deals, generate_ic_memo, screen_case
-from src.institutional import MonthlyDevelopmentInputs, monthly_development_model
 from src.lease import LeaseUnderwritingInputs, illustrative_rent_roll, lease_summary, underwrite_with_lease_roll
 from src.portfolio import portfolio_allocation, portfolio_risk_view, portfolio_snapshot
-
 
 st.set_page_config(page_title="AtlasRE | Deal Review", layout="wide", initial_sidebar_state="expanded")
 

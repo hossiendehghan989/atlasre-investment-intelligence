@@ -1,9 +1,8 @@
-from pathlib import Path
-from zipfile import ZipFile
 from io import BytesIO
+from zipfile import ZipFile
 
-from src.atlasre import DealInputs
 from generate_committee_report import build_screening_package, screening_package_zip
+from src.atlasre import DealInputs
 
 
 def test_screening_package_contains_executive_sections_and_supporting_files():

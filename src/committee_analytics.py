@@ -1,7 +1,6 @@
 """Decision-committee views built on the AtlasRE underwriting engine."""
 from __future__ import annotations
 
-import numpy as np
 import pandas as pd
 from scipy.optimize import brentq
 
