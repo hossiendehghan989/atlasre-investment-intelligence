@@ -5,6 +5,7 @@ import pandas as pd
 from scipy.optimize import brentq
 
 from .atlasre import DealInputs, underwrite_deal
+from .validation import finite
 
 
 def sensitivity_table(base: DealInputs, parameter: str, values: list[float]) -> pd.DataFrame:
@@ -12,6 +13,8 @@ def sensitivity_table(base: DealInputs, parameter: str, values: list[float]) -> 
     supported = {"purchase_price", "annual_noi", "annual_noi_growth", "exit_cap_rate", "leverage", "debt_rate"}
     if parameter not in supported:
         raise ValueError(f"parameter must be one of {sorted(supported)}")
+    if any(not isinstance(value, (int, float)) or not finite(value, "sensitivity value") for value in values):
+        raise ValueError("sensitivity values must be finite")
     rows = []
     for value in values:
         scenario = DealInputs(**{**base.__dict__, parameter: value})
@@ -22,6 +25,8 @@ def sensitivity_table(base: DealInputs, parameter: str, values: list[float]) -> 
 
 def break_even_exit_cap(base: DealInputs, target_irr: float = 0.12) -> float:
     """Solve for the exit cap rate that produces a target levered IRR."""
+    finite(target_irr, "target_irr")
+
     def objective(cap: float) -> float:
         deal = DealInputs(**{**base.__dict__, "exit_cap_rate": cap})
         return float(underwrite_deal(deal)["levered_irr"] - target_irr)

@@ -7,7 +7,6 @@ so a reviewer can challenge the assumptions line by line.
 """
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass, replace
 from datetime import date
 from typing import Any, Literal
@@ -15,6 +14,7 @@ from typing import Any, Literal
 import pandas as pd
 
 from .atlasre import DealInputs, underwrite_deal
+from .validation import finite, integer, unit_interval
 
 CreditQuality = Literal["STRONG", "AVERAGE", "WEAK", "UNKNOWN"]
 
@@ -42,10 +42,11 @@ class Lease:
     def validate(self) -> None:
         if not self.tenant.strip() or self.end < self.start:
             raise ValueError("lease tenant and dates must be valid")
-        if not math.isfinite(self.annual_rent) or self.annual_rent < 0:
+        if finite(self.annual_rent, "annual_rent") < 0:
             raise ValueError("annual_rent must be finite and non-negative")
-        if not math.isfinite(self.annual_escalation) or not math.isfinite(self.vacancy_assumption) or not math.isfinite(self.rollover_rent_change):
-            raise ValueError("lease rates must be finite")
+        finite(self.annual_escalation, "annual_escalation")
+        finite(self.vacancy_assumption, "vacancy_assumption")
+        finite(self.rollover_rent_change, "rollover_rent_change")
         if not -1 < self.annual_escalation <= 1 or not 0 <= self.vacancy_assumption <= 1:
             raise ValueError("escalation must be above -100% and vacancy must be in [0, 1]")
         if not -1 < self.rollover_rent_change <= 1:
@@ -66,7 +67,9 @@ class LeaseUnderwritingInputs:
     operating_expense_ratio: float = 0.0
 
     def validate(self) -> None:
-        if not self.leases or self.months <= 0 or not 0 <= self.operating_expense_ratio < 1:
+        integer(self.months, "months", minimum=1)
+        unit_interval(self.operating_expense_ratio, "operating_expense_ratio", inclusive_one=False)
+        if not self.leases:
             raise ValueError("leases, months, and operating expense ratio must be valid")
         for lease in self.leases:
             lease.validate()

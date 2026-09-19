@@ -5,6 +5,8 @@ import math
 
 import pandas as pd
 
+from .validation import positive, unit_interval
+
 
 def _validate_columns(deals: pd.DataFrame, required: set[str]) -> None:
     missing = required.difference(deals.columns)
@@ -14,8 +16,9 @@ def _validate_columns(deals: pd.DataFrame, required: set[str]) -> None:
 
 def allocate_capital(deals: pd.DataFrame, available_equity: float, max_single_asset_pct: float = 0.40, min_dscr: float = 1.25) -> pd.Series:
     """Allocate capital by score while re-allocating around binding concentration caps."""
-    if available_equity <= 0 or not 0 < max_single_asset_pct <= 1 or min_dscr <= 0:
-        raise ValueError("capital, concentration, and DSCR constraints must be valid")
+    positive(available_equity, "available_equity")
+    unit_interval(max_single_asset_pct, "max_single_asset_pct")
+    positive(min_dscr, "min_dscr")
     _validate_columns(deals, {"equity_required", "minimum_dscr", "risk_adjusted_score"})
     if any(not math.isfinite(float(value)) for column in ("equity_required", "minimum_dscr", "risk_adjusted_score") for value in deals[column]):
         raise ValueError("portfolio inputs must be finite")
@@ -48,6 +51,9 @@ def portfolio_allocation(deals: pd.DataFrame, available_equity: float, max_singl
     """Return allocation, eligibility, and a reason for every constraint decision."""
     required = {"asset", "equity_required", "risk_adjusted_score", "levered_irr", "minimum_dscr"}
     _validate_columns(deals, required)
+    positive(available_equity, "available_equity")
+    unit_interval(max_single_asset_pct, "max_single_asset_pct")
+    positive(min_dscr, "min_dscr")
     output = deals.copy()
     output["capital_eligible"] = output["equity_required"] <= available_equity
     output["dscr_eligible"] = output["minimum_dscr"] >= min_dscr
@@ -98,6 +104,7 @@ def portfolio_allocation(deals: pd.DataFrame, available_equity: float, max_singl
 
 def portfolio_risk_view(allocation: pd.DataFrame, min_dscr: float = 1.25) -> dict[str, float]:
     """Summarize financed exposure to return, coverage, and concentration risk."""
+    positive(min_dscr, "min_dscr")
     _validate_columns(allocation, {"recommended_allocation", "levered_irr", "minimum_dscr", "allocation_weight"})
     invested = allocation[allocation["recommended_allocation"] > 0]
     invested_capital = float(invested["recommended_allocation"].sum())

@@ -14,6 +14,8 @@ from src.lease import LeaseUnderwritingInputs, illustrative_rent_roll, lease_sum
 from src.portfolio import portfolio_allocation, portfolio_risk_view, portfolio_snapshot
 from src.presentation import fraction_from_percent
 
+ROOT = Path(__file__).resolve().parent
+
 st.set_page_config(page_title="AtlasRE | Deal Review", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown(
@@ -153,7 +155,10 @@ with tab_screen:
     with right:
         st.markdown("### Working files")
         st.caption("The download contains the review memo, assumptions, stress cases, risk summary, debt schedule, and rent-roll reference files.")
-        st.download_button("Download review files", build_download(base_deal), file_name="atlasre-deal-review.zip", mime="application/zip", use_container_width=True)
+        if st.button("Prepare review files", use_container_width=True):
+            st.session_state["review_package"] = build_download(base_deal)
+        if "review_package" in st.session_state:
+            st.download_button("Download review files", st.session_state["review_package"], file_name="atlasre-deal-review.zip", mime="application/zip", use_container_width=True)
         st.download_button("Download review memo", generate_ic_memo(current_case, hurdle, model_version=MODEL_VERSION, risk_metrics=risk), file_name="atlasre-deal-review.md", mime="text/markdown", use_container_width=True)
 
 with tab_returns:
@@ -191,7 +196,7 @@ with tab_debt:
 
 with tab_portfolio:
     st.markdown("### Allocation check")
-    ranked = rank_markets(pd.read_csv(Path("data/market_inputs.csv")))
+    ranked = rank_markets(pd.read_csv(ROOT / "data" / "market_inputs.csv"))
     portfolio_deals = pd.DataFrame([
         {"asset": "Core-plus logistics · Dubai", "equity_required": underwriting["equity_required"], "risk_adjusted_score": float(ranked.iloc[0]["risk_adjusted_score"]), "levered_irr": underwriting["levered_irr"], "minimum_dscr": underwriting["minimum_dscr"]},
         {"asset": "Residential value-add · London", "equity_required": underwriting["equity_required"] * 0.8, "risk_adjusted_score": float(ranked.iloc[1]["risk_adjusted_score"]), "levered_irr": underwriting["levered_irr"] - 0.015, "minimum_dscr": underwriting["minimum_dscr"] - 0.05},

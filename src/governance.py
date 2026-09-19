@@ -10,6 +10,8 @@ from typing import Any, TypedDict
 
 import pandas as pd
 
+from .validation import integer
+
 
 class LineageRecord(TypedDict):
     output: str
@@ -67,6 +69,7 @@ def versioned_assumptions(
     avoids inserting a volatile timestamp into a logically identical model run;
     callers that have a real effective date should provide it explicitly.
     """
+    integer(version, "version", minimum=1)
     if not values or not source or not owner:
         raise ValueError("assumption values, source, and owner are required")
     supersedes = supersedes or {}
@@ -99,7 +102,8 @@ def assumption_register(values: dict[str, tuple[Any, str]], source: str = "Illus
 
 def lineage_record(output_name: str, output_value: Any, inputs: Iterable[str], method: str, source_refs: Iterable[str] = (), assumption_version: int = 1) -> LineageRecord:
     inputs_list, sources_list = list(inputs), list(source_refs)
-    if not output_name or not inputs_list or not method or assumption_version < 1:
+    integer(assumption_version, "assumption_version", minimum=1)
+    if not output_name or not inputs_list or not method:
         raise ValueError("lineage requires an output, input assumptions, method, and positive version")
     return {
         "output": output_name,

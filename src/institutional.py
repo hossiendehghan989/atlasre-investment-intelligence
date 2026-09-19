@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 
 from .atlasre import _irr
+from .validation import integer, non_negative, positive, unit_interval
 
 
 @dataclass(frozen=True)
@@ -49,12 +50,16 @@ def _annualize_monthly_irr(monthly_irr: float) -> float:
 
 
 def _validate_inputs(p: MonthlyDevelopmentInputs) -> None:
-    values = [p.land_cost, p.hard_cost, p.soft_cost, p.stabilized_annual_noi]
-    rates = [p.contingency_pct, p.exit_cap_rate, p.max_ltc, p.interest_rate, p.lender_fee_pct, p.pref_rate, p.promote_pct]
-    if min(values) <= 0 or p.construction_months <= 0 or p.stabilization_months < 0 or p.hold_months_after_stabilization <= 0:
-        raise ValueError("costs, NOI, construction months, and hold months must be valid")
-    if p.noi_ramp_months <= 0 or min(rates) < 0 or p.exit_cap_rate <= 0 or p.max_ltc >= 1 or p.promote_pct >= 1:
-        raise ValueError("rates and timing inputs are outside valid bounds")
+    for name in ("land_cost", "hard_cost", "soft_cost", "stabilized_annual_noi", "exit_cap_rate"):
+        positive(getattr(p, name), name)
+    for name in ("contingency_pct", "interest_rate", "lender_fee_pct", "pref_rate"):
+        non_negative(getattr(p, name), name)
+    unit_interval(p.max_ltc, "max_ltc", inclusive_one=False)
+    unit_interval(p.promote_pct, "promote_pct", inclusive_one=False)
+    integer(p.construction_months, "construction_months", minimum=1)
+    integer(p.stabilization_months, "stabilization_months", minimum=0)
+    integer(p.hold_months_after_stabilization, "hold_months_after_stabilization", minimum=1)
+    integer(p.noi_ramp_months, "noi_ramp_months", minimum=1)
 
 
 def monthly_development_model(p: MonthlyDevelopmentInputs) -> tuple[pd.DataFrame, dict[str, float | list[float]]]:
@@ -131,8 +136,10 @@ def monthly_development_model(p: MonthlyDevelopmentInputs) -> tuple[pd.DataFrame
 
 def size_debt(noi: float, cap_rate: float, max_ltv: float, dscr_requirement: float, interest_rate: float, amortization_years: int, value: float) -> dict[str, float]:
     """Size debt from the binding of LTV and amortizing DSCR constraints."""
-    if min(noi, cap_rate, interest_rate, value) <= 0 or dscr_requirement <= 0 or not 0 < max_ltv <= 1:
-        raise ValueError("NOI, cap rate, interest rate, value, LTV, and DSCR must be valid")
+    for name, number in (("noi", noi), ("cap_rate", cap_rate), ("interest_rate", interest_rate), ("value", value), ("dscr_requirement", dscr_requirement)):
+        positive(number, name)
+    unit_interval(max_ltv, "max_ltv")
+    integer(amortization_years, "amortization_years", minimum=1)
     r = interest_rate / 12
     n = amortization_years * 12
     annual_payment_factor = (r * (1 + r) ** n) / ((1 + r) ** n - 1) * 12

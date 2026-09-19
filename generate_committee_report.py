@@ -251,8 +251,9 @@ def screening_package_zip(
     return buffer.getvalue()
 
 
-def write_screening_package(out: Path = Path("artifacts"), deal: DealInputs | None = None) -> Path:
+def write_screening_package(out: Path | None = None, deal: DealInputs | None = None) -> Path:
     """Write a default, clearly illustrative package for local inspection."""
+    out = out or Path(__file__).resolve().parent / "artifacts"
     out.mkdir(exist_ok=True)
     files = build_screening_package(deal or DealInputs(10_000_000, 650_000, hold_years=5, leverage=0.5))
     for name, content in files.items():
