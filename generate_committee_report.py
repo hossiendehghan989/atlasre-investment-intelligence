@@ -12,7 +12,7 @@ from src.advanced_underwriting import monte_carlo_underwriting, risk_summary, st
 from src.atlasre import DealInputs, underwrite_deal
 from src.committee_analytics import investment_committee_summary
 from src.governance import default_lineage, lineage_json, model_run_fingerprint, versioned_assumptions
-from src.ic_workflow import DealCase, ScreeningThresholds, screen_case
+from src.ic_workflow import DealCase, ScreeningThresholds, generate_ic_memo, screen_case
 from src.institutional import MonthlyDevelopmentInputs, monthly_development_model
 from src.lease import (
     LeaseUnderwritingInputs,
@@ -140,12 +140,18 @@ def build_screening_package(
         })
     fingerprint = model_run_fingerprint(model_version, assumptions, lineage)
     committee = investment_committee_summary(case_deal, hurdle_rate=hurdle_rate)
+    memo = "# ILLUSTRATIVE — generated from the current package inputs\n\n" + generate_ic_memo(
+        case,
+        hurdle_rate=hurdle_rate,
+        model_version=model_version,
+        risk_metrics=risk,
+    )
     flags = "\n".join(f"- **{flag['severity']}** — {flag['flag']}: {flag['evidence']}" for flag in screen["flags"])
     thesis = (
         "The case is suitable only for initial, downside-led screening. Its economic outputs remain conditional on "
         "the supplied operating, valuation, financing, and source-verification assumptions."
     )
-    report = f"""# AtlasRE Investment Committee Screening Package
+    report = f"""# ILLUSTRATIVE — AtlasRE Investment Committee Screening Package
 
 > **Status:** This is screening decision support only. It is not an approval, valuation opinion, investment recommendation, or production underwriting output.
 
@@ -225,6 +231,18 @@ The package includes an illustrative monthly development schedule for reference.
 The fingerprint hashes the model version, assumption snapshot, and lineage records. The package includes `assumptions.csv`, `annual_debt_schedule.csv`, `lineage.json`, `risk_summary.json`, and `stress_cases.csv`. It is a reproducibility handle, not a persistent approval ledger.
 """
     files: dict[str, bytes] = {
+        "README_ILLUSTRATIVE.md": f"""# ILLUSTRATIVE sample package
+
+Every file in this package is generated from the repository's default illustrative case. It is not a deal file, source document, valuation opinion, or investment recommendation.
+
+- Model version: `{model_version}`
+- Run fingerprint: `{fingerprint}`
+- Source status: `{effective_source_status}`
+- Downside simulation count: `{simulations}` with seed `42`
+
+Open `excel_reconciliation.xlsx` in Excel or LibreOffice to recalculate its live formulas. See `docs/REVIEWER_GUIDE.md` in the repository for review steps and model boundaries.
+""".encode(),
+        "investment_committee_memo.md": memo.encode("utf-8"),
         "investment_committee_report.md": report.encode("utf-8"),
         "stress_cases.csv": stress.to_csv(index=False).encode("utf-8"),
         "annual_debt_schedule.csv": pd.DataFrame(underwriting["debt_schedule"]).to_csv(index=False).encode("utf-8"),

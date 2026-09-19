@@ -1,11 +1,18 @@
 from io import BytesIO
+from pathlib import Path
+from shutil import which
+from subprocess import run
+from tempfile import TemporaryDirectory
 
 import numpy as np
 import numpy_financial as npf
+import pytest
 from openpyxl import load_workbook
 
 from src.atlasre import DealInputs, underwrite_deal
 from src.reconciliation import build_reconciliation_workbook
+
+OFFICE = which("libreoffice") or which("soffice")
 
 
 def _workbook(deal: DealInputs):
@@ -92,3 +99,28 @@ def test_reconciliation_static_outputs_match_independent_python_reevaluation():
     assert outputs["Levered IRR"] == result["levered_irr"]
     np.testing.assert_allclose(outputs["Unlevered NPV"], result["unlevered_npv"], rtol=0, atol=1e-6)
     assert months == 60
+
+
+@pytest.mark.skipif(OFFICE is None, reason="LibreOffice is not available in this environment")
+def test_reconciliation_differences_pass_after_libreoffice_recalculation():
+    deal = DealInputs(10_000_000, 650_000, leverage=0.5)
+    with TemporaryDirectory() as temporary_directory:
+        temporary_path = Path(temporary_directory)
+        source = temporary_path / "reconciliation.xlsx"
+        recalculated = temporary_path / "recalculated"
+        recalculated.mkdir()
+        source.write_bytes(build_reconciliation_workbook(deal))
+        run(
+            [OFFICE, "--headless", "--convert-to", "xlsx", "--outdir", str(recalculated), str(source)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        workbook = load_workbook(recalculated / source.name, data_only=True)
+
+    reconciliation = workbook["Reconciliation"]
+    for row in range(4, 12):
+        difference = reconciliation.cell(row, 4).value
+        tolerance = reconciliation.cell(row, 5).value
+        assert reconciliation.cell(row, 6).value == "PASS"
+        assert abs(float(difference)) <= float(tolerance)

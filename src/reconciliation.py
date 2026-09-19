@@ -231,7 +231,7 @@ def build_reconciliation_workbook(
             cash_flows.cell(row, 2, f"='Annual NOI'!E{annual_row}")
             cash_flows.cell(row, 3, f"=B{row}-'Annual NOI'!F{annual_row}")
             if period == deal.hold_years:
-                cash_flows.cell(row, 3, f"=C{row}-'Debt Schedule'!I{monthly_end}")
+                cash_flows.cell(row, 3, f"=B{row}-'Annual NOI'!F{annual_row}-'Debt Schedule'!I{monthly_end}")
             cash_flows.cell(row, 4, f"Year {period}")
     cash_flows["A11"] = "Unlevered IRR"
     cash_flows["B11"] = f"=IRR(B{cash_start}:B{cash_end})"

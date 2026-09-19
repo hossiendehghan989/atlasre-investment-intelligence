@@ -8,6 +8,11 @@ from src.atlasre import DealInputs
 def test_screening_package_contains_executive_sections_and_supporting_files():
     files = build_screening_package(DealInputs(10_000_000, 650_000, leverage=.5), simulations=100)
     report = files["investment_committee_report.md"].decode()
+    memo = files["investment_committee_memo.md"].decode()
+    package_readme = files["README_ILLUSTRATIVE.md"].decode()
+    assert report.startswith("# ILLUSTRATIVE")
+    assert memo.startswith("# ILLUSTRATIVE")
+    assert package_readme.startswith("# ILLUSTRATIVE")
     assert "Downside and governance flags" in report
     assert "Expected shortfall" in report
     assert "Model-run fingerprint" in report
@@ -30,6 +35,8 @@ def test_screening_package_zip_is_readable():
     with ZipFile(BytesIO(package)) as archive:
         names = set(archive.namelist())
     assert "investment_committee_report.md" in names
+    assert "investment_committee_memo.md" in names
+    assert "README_ILLUSTRATIVE.md" in names
     assert "annual_debt_schedule.csv" in names
     assert "monthly_development_model.csv" in names
     assert "lease_summary.csv" in names
