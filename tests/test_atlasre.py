@@ -67,3 +67,4 @@ def test_portfolio_exposure_respects_capital():
     ])
     output = portfolio_exposure(deals, 1000)
     assert output["recommended_allocation"].sum() == pytest.approx(1000)
+    assert set(output["allocation_method"]) == {"naive score-weighted screen"}

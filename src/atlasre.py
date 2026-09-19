@@ -178,6 +178,14 @@ def rank_markets(markets: pd.DataFrame) -> pd.DataFrame:
 
 
 def portfolio_exposure(deals: pd.DataFrame, capital: float) -> pd.DataFrame:
+    """Return a naive score-weighted exposure screen.
+
+    This legacy helper is intentionally not the constrained portfolio allocator.
+    It filters only on whether an asset's required equity fits available capital,
+    then allocates the remaining capital in proportion to non-negative score.
+    Callers that need DSCR gates, concentration caps, or allocation reasons must
+    use ``src.portfolio.portfolio_allocation`` instead.
+    """
     required = {"asset", "equity_required", "risk_adjusted_score"}
     if capital <= 0 or not required.issubset(deals.columns):
         raise ValueError(f"capital must be positive and deals must include {sorted(required)}")
@@ -186,4 +194,5 @@ def portfolio_exposure(deals: pd.DataFrame, capital: float) -> pd.DataFrame:
     weights = data["risk_adjusted_score"].clip(lower=0) * data["eligible"]
     data["allocation_weight"] = weights / weights.sum() if weights.sum() else 0.0
     data["recommended_allocation"] = data["allocation_weight"] * capital
+    data["allocation_method"] = "naive score-weighted screen"
     return data
