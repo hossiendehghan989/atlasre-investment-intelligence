@@ -1,6 +1,12 @@
 import numpy as np
 
-from src.institutional import MonthlyDevelopmentInputs, assumption_quality, lp_gp_waterfall, monthly_development_model, size_debt
+from src.institutional import (
+    MonthlyDevelopmentInputs,
+    assumption_quality,
+    lp_gp_waterfall,
+    monthly_development_model,
+    size_debt,
+)
 
 
 def test_monthly_model_balances_and_generates_exit():

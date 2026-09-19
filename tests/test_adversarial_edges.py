@@ -3,7 +3,14 @@ import pytest
 
 from src.atlasre import DealInputs, market_score, underwrite_deal
 from src.debt import DebtTerms, monthly_debt_schedule
-from src.governance import audit_event, default_lineage, lineage_record, model_run_fingerprint, verify_audit_chain, versioned_assumptions
+from src.governance import (
+    audit_event,
+    default_lineage,
+    lineage_record,
+    model_run_fingerprint,
+    verify_audit_chain,
+    versioned_assumptions,
+)
 from src.portfolio import portfolio_allocation
 
 

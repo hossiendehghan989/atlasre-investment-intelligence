@@ -1,0 +1,19 @@
+{
+  "package_label": "ILLUSTRATIVE",
+  "model_version": "deterministic-core-v0.10",
+  "run_fingerprint": "85a3e556a66a171ebfec0a22fe1407540b5be67470e6c1f4c9b4e475b3502733",
+  "metrics": {
+    "p05_irr": 0.0276054644920269,
+    "p10_irr": 0.04749271852064079,
+    "median_irr": 0.12065976556190175,
+    "p90_irr": 0.19342086398216443,
+    "p95_irr": 0.21298965994158559,
+    "expected_shortfall_irr_10": 0.02056046356716956,
+    "expected_shortfall_npv_10": -2247767.6431427486,
+    "worst_irr": -0.13972425058858148,
+    "probability_irr_below_hurdle": 0.4962,
+    "probability_negative_npv": 0.5778,
+    "median_npv": -260937.428559463,
+    "probability_dscr_below_125": 0.0044
+  }
+}

@@ -1,15 +1,16 @@
 """Typed committee workflow, comparison, and downside-first memo generation."""
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Literal, TypedDict
 
 import pandas as pd
 
 from .atlasre import DealInputs, underwrite_deal
 from .committee_analytics import investment_committee_summary
-
+from .governance import assumption_register, default_lineage, model_run_fingerprint
 
 DecisionStatus = Literal["PASSES INITIAL SCREEN", "REVIEW REQUIRED", "REJECT / REWORK"]
 
@@ -31,10 +32,17 @@ class DealCase:
     name: str
     inputs: DealInputs
     source_status: str = "REVIEW REQUIRED"
+    verified_by: str | None = None
+    source_reference: str | None = None
 
     def validate(self) -> None:
         if not self.deal_id or not self.name or self.source_status not in {"VERIFIED", "REVIEW REQUIRED"}:
             raise ValueError("deal identity and source_status must be valid")
+
+    def effective_source_status(self) -> str:
+        if self.source_status == "VERIFIED" and self.verified_by and self.source_reference:
+            return "VERIFIED"
+        return "REVIEW REQUIRED"
 
 
 class ScreeningFlag(TypedDict):
@@ -49,14 +57,20 @@ def screen_case(case: DealCase, thresholds: ScreeningThresholds | None = None) -
     thresholds = thresholds or ScreeningThresholds()
     thresholds.validate()
     result = underwrite_deal(case.inputs)
+    source_status = case.effective_source_status()
     flags: list[ScreeningFlag] = []
-    if case.source_status != thresholds.source_status_required:
-        flags.append({"severity": "GOVERNANCE", "flag": "Source package is not verified", "evidence": case.source_status})
+    if source_status != thresholds.source_status_required:
+        evidence = case.source_status
+        if case.source_status == "VERIFIED":
+            evidence = "VERIFIED requires verified_by and source_reference"
+        flags.append({"severity": "GOVERNANCE", "flag": "Source package is not verified", "evidence": evidence})
     if result["unlevered_npv"] < 0:
         flags.append({"severity": "CRITICAL", "flag": "Negative unlevered NPV", "evidence": f"${result['unlevered_npv']:,.0f}"})
     if result["minimum_dscr"] < thresholds.minimum_dscr:
         flags.append({"severity": "HIGH", "flag": f"DSCR below {thresholds.minimum_dscr:.2f}x", "evidence": f"{result['minimum_dscr']:.2f}x"})
-    if result["levered_irr"] < thresholds.hurdle_rate:
+    if not math.isfinite(float(result["levered_irr"])):
+        flags.append({"severity": "CRITICAL", "flag": "Levered IRR is not economically defined", "evidence": "No finite IRR root found"})
+    elif result["levered_irr"] < thresholds.hurdle_rate:
         flags.append({"severity": "HIGH", "flag": "Levered IRR below hurdle", "evidence": f"{result['levered_irr']:.1%} vs {thresholds.hurdle_rate:.1%}"})
     if not flags:
         flags.append({"severity": "INFO", "flag": "No initial-screen exception", "evidence": "All configured gates passed"})
@@ -66,7 +80,7 @@ def screen_case(case: DealCase, thresholds: ScreeningThresholds | None = None) -
         status = "REVIEW REQUIRED"
     else:
         status = "PASSES INITIAL SCREEN"
-    return {"deal_id": case.deal_id, "status": status, "flags": flags, "metrics": result}
+    return {"deal_id": case.deal_id, "status": status, "source_status": source_status, "flags": flags, "metrics": result}
 
 
 def compare_deals(cases: list[DealCase], hurdle_rate: float = 0.12) -> pd.DataFrame:
@@ -80,7 +94,21 @@ def compare_deals(cases: list[DealCase], hurdle_rate: float = 0.12) -> pd.DataFr
         summary = investment_committee_summary(case.inputs, hurdle_rate)
         screen = screen_case(case, thresholds)
         flags = screen["flags"]
-        rows.append({"deal_id": case.deal_id, "deal": case.name, "source_status": case.source_status, "decision_status": screen["status"], "critical_flags": sum(flag["severity"] == "CRITICAL" for flag in flags), "review_flags": sum(flag["severity"] in {"HIGH", "GOVERNANCE"} for flag in flags), "entry_cap": result["entry_cap_rate"], "levered_irr": result["levered_irr"], "unlevered_irr": result["unlevered_irr"], "equity_multiple": result["equity_multiple"], "minimum_dscr": result["minimum_dscr"], "unlevered_npv": result["unlevered_npv"], "decision_flag": summary["decision_flag"]})
+        rows.append({
+            "deal_id": case.deal_id,
+            "deal": case.name,
+            "source_status": screen["source_status"],
+            "decision_status": screen["status"],
+            "critical_flags": sum(flag["severity"] == "CRITICAL" for flag in flags),
+            "review_flags": sum(flag["severity"] in {"HIGH", "GOVERNANCE"} for flag in flags),
+            "entry_cap": result["entry_cap_rate"],
+            "levered_irr": result["levered_irr"],
+            "unlevered_irr": result["unlevered_irr"],
+            "equity_multiple": result["equity_multiple"],
+            "minimum_dscr": result["minimum_dscr"],
+            "unlevered_npv": result["unlevered_npv"],
+            "decision_flag": summary["decision_flag"],
+        })
     return pd.DataFrame(rows)
 
 
@@ -90,19 +118,48 @@ def screening_flags(inputs: DealInputs, hurdle_rate: float = 0.12) -> dict[str, 
     return screen_case(case, ScreeningThresholds(hurdle_rate=hurdle_rate))
 
 
-def generate_ic_memo(case: DealCase, hurdle_rate: float = 0.12, author: str = "AtlasRE") -> str:
-    """Generate a challengeable memo whose recommendation cannot bypass governance."""
+def _memo_assumptions(case: DealCase) -> pd.DataFrame:
+    values = {
+        "purchase_price": (case.inputs.purchase_price, "USD"),
+        "annual_noi": (case.inputs.annual_noi, "USD / year"),
+        "annual_noi_growth": (case.inputs.annual_noi_growth, "%"),
+        "exit_cap_rate": (case.inputs.exit_cap_rate, "%"),
+        "leverage": (case.inputs.leverage, "%"),
+        "debt_rate": (case.inputs.debt_rate, "%"),
+    }
+    return assumption_register(values, source="Screening-case input")
+
+
+def generate_ic_memo(
+    case: DealCase,
+    hurdle_rate: float = 0.12,
+    author: str = "AtlasRE",
+    model_version: str = "deterministic-core-v0.10",
+    risk_metrics: dict[str, float] | None = None,
+) -> str:
+    """Generate a downside-first screening memo with a reproducibility handle."""
     result = underwrite_deal(case.inputs)
     summary = investment_committee_summary(case.inputs, hurdle_rate)
     screen = screen_case(case, ScreeningThresholds(hurdle_rate=hurdle_rate))
+    assumptions = _memo_assumptions(case)
+    fingerprint = model_run_fingerprint(model_version, assumptions, default_lineage())
     flag_lines = "\n".join(f"- **{flag['severity']}** — {flag['flag']}: {flag['evidence']}" for flag in screen["flags"])
+    tail_section = "Risk tails were not supplied for this memo run; run the screening package before a committee decision."
+    if risk_metrics is not None:
+        tail_section = f"""| Metric | Result |
+| --- | ---: |
+| Expected shortfall, worst 10% IRR | {risk_metrics['expected_shortfall_irr_10']:.2%} |
+| Expected shortfall, worst 10% NPV | ${risk_metrics['expected_shortfall_npv_10']:,.0f} |
+| Probability negative NPV | {risk_metrics['probability_negative_npv']:.2%} |
+| Probability DSCR below 1.25x | {risk_metrics['probability_dscr_below_125']:.2%} |"""
     return f"""# Investment Committee Screening Memo — {case.name}
 
 **Deal ID:** {case.deal_id}  
 **Prepared by:** {author}  
-**As of:** {datetime.now(timezone.utc).date().isoformat()}  
-**Source status:** **{case.source_status}**
+**As of:** {datetime.now(UTC).date().isoformat()}
+**Source status:** **{screen['source_status']}**
 **Decision status:** **{screen['status']}**
+**Model-run fingerprint:** `{fingerprint}`
 
 ## 1. Decision framing
 
@@ -111,6 +168,10 @@ This is a screening memo, not an approval. The deterministic model cannot substi
 ## 2. Downside first
 
 {flag_lines}
+
+### Risk tails
+
+{tail_section}
 
 ## 3. Core outputs
 
@@ -125,18 +186,22 @@ This is a screening memo, not an approval. The deterministic model cannot substi
 | Exit value | ${result['exit_value']:,.0f} |
 | Break-even exit cap | {summary['break_even_exit_cap']:.2%} |
 
-## 4. Traceability gate
+## 4. Assumptions and traceability
 
-- Model version: `deterministic-core-v1`
-- Assumption state: **{case.source_status}**
-- Required source references: deal inputs, operating statement/rent roll, financing terms, market comparables, legal/title diligence.
-- Output lineage: key outputs must reference explicit assumptions and source IDs before approval.
+The assumption register carries stable IDs, version, source status, and supersession fields. The model-run fingerprint above hashes the model version, assumption snapshot, and lineage records used in this memo.
 
-## 5. Recommendation gate
+## 5. Recommended next diligence steps
+
+1. Reconcile the rent roll and operating statement to source documents.
+2. Validate exit-cap evidence, terminal-value timing, and market comparables.
+3. Obtain and review the financing term sheet, including covenants, fees, amortization, and maturity.
+4. Replace illustrative assumptions with source-backed, reviewer-verified inputs and rerun this memo.
+
+## 6. Recommendation gate
 
 **Initial status:** `{screen['status']}`
 **Next gate:** resolve every CRITICAL, HIGH, and GOVERNANCE flag, attach source documents, then rerun the downside cases before recommendation.
 """
 
 
-__all__ = ["DealCase", "ScreeningThresholds", "screen_case", "compare_deals", "screening_flags", "generate_ic_memo"]
+__all__ = ["DealCase", "ScreeningThresholds", "compare_deals", "generate_ic_memo", "screen_case", "screening_flags"]

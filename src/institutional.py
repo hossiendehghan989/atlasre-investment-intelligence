@@ -6,13 +6,15 @@ presented as project or equity IRR.
 """
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable
+from itertools import pairwise
 
 import numpy as np
 import pandas as pd
 
 from .atlasre import _irr
+from .validation import integer, non_negative, positive, unit_interval
 
 
 @dataclass(frozen=True)
@@ -48,12 +50,16 @@ def _annualize_monthly_irr(monthly_irr: float) -> float:
 
 
 def _validate_inputs(p: MonthlyDevelopmentInputs) -> None:
-    values = [p.land_cost, p.hard_cost, p.soft_cost, p.stabilized_annual_noi]
-    rates = [p.contingency_pct, p.exit_cap_rate, p.max_ltc, p.interest_rate, p.lender_fee_pct, p.pref_rate, p.promote_pct]
-    if min(values) <= 0 or p.construction_months <= 0 or p.stabilization_months < 0 or p.hold_months_after_stabilization <= 0:
-        raise ValueError("costs, NOI, construction months, and hold months must be valid")
-    if p.noi_ramp_months <= 0 or min(rates) < 0 or p.exit_cap_rate <= 0 or p.max_ltc >= 1 or p.promote_pct >= 1:
-        raise ValueError("rates and timing inputs are outside valid bounds")
+    for name in ("land_cost", "hard_cost", "soft_cost", "stabilized_annual_noi", "exit_cap_rate"):
+        positive(getattr(p, name), name)
+    for name in ("contingency_pct", "interest_rate", "lender_fee_pct", "pref_rate"):
+        non_negative(getattr(p, name), name)
+    unit_interval(p.max_ltc, "max_ltc", inclusive_one=False)
+    unit_interval(p.promote_pct, "promote_pct", inclusive_one=False)
+    integer(p.construction_months, "construction_months", minimum=1)
+    integer(p.stabilization_months, "stabilization_months", minimum=0)
+    integer(p.hold_months_after_stabilization, "hold_months_after_stabilization", minimum=1)
+    integer(p.noi_ramp_months, "noi_ramp_months", minimum=1)
 
 
 def monthly_development_model(p: MonthlyDevelopmentInputs) -> tuple[pd.DataFrame, dict[str, float | list[float]]]:
@@ -107,7 +113,10 @@ def monthly_development_model(p: MonthlyDevelopmentInputs) -> tuple[pd.DataFrame
         "debt_repayment": debt_repayment,
     })
     equity_flow = -(df["total_draw"] - df["debt_draw"] + df["lender_fee"]) + df["noi"] + df["sale_proceeds"] - df["debt_repayment"]
-    project_flow = -df["total_draw"] + df["noi"] + df["sale_proceeds"] - df["interest"] - df["debt_repayment"]
+    # Project IRR is unlevered: financing cash flows (draws, interest, and
+    # repayment) are excluded. Equity IRR below is levered and includes the
+    # actual equity contributions and debt repayment.
+    project_flow = -df["total_draw"] + df["noi"] + df["sale_proceeds"]
     total_equity = float((df["total_draw"] - df["debt_draw"] + df["lender_fee"]).sum())
     return df, {
         "total_cost": float(total_cost),
@@ -120,14 +129,17 @@ def monthly_development_model(p: MonthlyDevelopmentInputs) -> tuple[pd.DataFrame
         "exit_value": float(exit_value),
         "project_irr": _annualize_monthly_irr(_irr(project_flow)),
         "equity_irr_pre_waterfall": _annualize_monthly_irr(_irr(equity_flow)),
+        "project_cash_flows": project_flow.tolist(),
         "equity_cash_flows": equity_flow.tolist(),
     }
 
 
 def size_debt(noi: float, cap_rate: float, max_ltv: float, dscr_requirement: float, interest_rate: float, amortization_years: int, value: float) -> dict[str, float]:
     """Size debt from the binding of LTV and amortizing DSCR constraints."""
-    if min(noi, cap_rate, interest_rate, value) <= 0 or dscr_requirement <= 0 or not 0 < max_ltv <= 1:
-        raise ValueError("NOI, cap rate, interest rate, value, LTV, and DSCR must be valid")
+    for name, number in (("noi", noi), ("cap_rate", cap_rate), ("interest_rate", interest_rate), ("value", value), ("dscr_requirement", dscr_requirement)):
+        positive(number, name)
+    unit_interval(max_ltv, "max_ltv")
+    integer(amortization_years, "amortization_years", minimum=1)
     r = interest_rate / 12
     n = amortization_years * 12
     annual_payment_factor = (r * (1 + r) ** n) / ((1 + r) ** n - 1) * 12
@@ -149,7 +161,7 @@ def multi_tier_waterfall(equity: float, total_distributable_cash: float, pref_ra
     ordered = list(tiers)
     if not ordered or any(t.hurdle_rate <= pref_rate or not 0 <= t.promote_pct < 1 for t in ordered):
         raise ValueError("tiers must be non-empty, above pref, and have valid promote percentages")
-    if any(left.hurdle_rate >= right.hurdle_rate for left, right in zip(ordered, ordered[1:])):
+    if any(left.hurdle_rate >= right.hurdle_rate for left, right in pairwise(ordered)):
         raise ValueError("waterfall tiers must be strictly increasing")
     cash_remaining = float(total_distributable_cash)
     return_of_capital = min(equity, cash_remaining)
@@ -180,7 +192,7 @@ def multi_tier_waterfall(equity: float, total_distributable_cash: float, pref_ra
 def lp_gp_waterfall(equity: float, distributable_profit: float, pref_rate: float, hold_years: int, promote_pct: float) -> dict[str, float]:
     """Backward-compatible single-promote wrapper using total proceeds semantics."""
     result = multi_tier_waterfall(equity, equity + distributable_profit, pref_rate, hold_years, [WaterfallTier(pref_rate + 0.0001, promote_pct, "Promote")])
-    return {key: value for key, value in result.items() if isinstance(value, (float, int))}
+    return {key: value for key, value in result.items() if isinstance(value, float | int)}
 
 
 def assumption_quality(inputs: dict[str, float | str | int]) -> pd.DataFrame:
@@ -188,4 +200,4 @@ def assumption_quality(inputs: dict[str, float | str | int]) -> pd.DataFrame:
     return pd.DataFrame([{"assumption": name, "value": value, "status": "REVIEW REQUIRED", "source": "Not supplied; illustrative input"} for name, value in inputs.items()])
 
 
-__all__ = ["MonthlyDevelopmentInputs", "WaterfallTier", "monthly_development_model", "size_debt", "multi_tier_waterfall", "lp_gp_waterfall", "assumption_quality"]
+__all__ = ["MonthlyDevelopmentInputs", "WaterfallTier", "assumption_quality", "lp_gp_waterfall", "monthly_development_model", "multi_tier_waterfall", "size_debt"]

@@ -1,0 +1,9 @@
+# ILLUSTRATIVE | model_version=deterministic-core-v0.10 | run_fingerprint=85a3e556a66a171ebfec0a22fe1407540b5be67470e6c1f4c9b4e475b3502733
+assumption_id,name,value,unit,version,source,status,owner,verified_by,effective_at,supersedes,notes
+ATLAS-001:purchase_price:v1,purchase_price,10000000.0,USD,1,Illustrative dashboard input,REVIEW REQUIRED,Investment team,,,,
+ATLAS-001:annual_noi:v1,annual_noi,650000.0,USD / year,1,Illustrative dashboard input,REVIEW REQUIRED,Investment team,,,,
+ATLAS-001:annual_noi_growth:v1,annual_noi_growth,0.03,%,1,Illustrative dashboard input,REVIEW REQUIRED,Investment team,,,,
+ATLAS-001:exit_cap_rate:v1,exit_cap_rate,0.06,%,1,Illustrative dashboard input,REVIEW REQUIRED,Investment team,,,,
+ATLAS-001:leverage:v1,leverage,0.5,%,1,Illustrative dashboard input,REVIEW REQUIRED,Investment team,,,,
+ATLAS-001:debt_rate:v1,debt_rate,0.06,%,1,Illustrative dashboard input,REVIEW REQUIRED,Investment team,,,,
+ATLAS-001:hold_years:v1,hold_years,5.0,years,1,Illustrative dashboard input,REVIEW REQUIRED,Investment team,,,,

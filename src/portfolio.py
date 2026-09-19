@@ -5,6 +5,8 @@ import math
 
 import pandas as pd
 
+from .validation import positive, unit_interval
+
 
 def _validate_columns(deals: pd.DataFrame, required: set[str]) -> None:
     missing = required.difference(deals.columns)
@@ -14,8 +16,9 @@ def _validate_columns(deals: pd.DataFrame, required: set[str]) -> None:
 
 def allocate_capital(deals: pd.DataFrame, available_equity: float, max_single_asset_pct: float = 0.40, min_dscr: float = 1.25) -> pd.Series:
     """Allocate capital by score while re-allocating around binding concentration caps."""
-    if available_equity <= 0 or not 0 < max_single_asset_pct <= 1 or min_dscr <= 0:
-        raise ValueError("capital, concentration, and DSCR constraints must be valid")
+    positive(available_equity, "available_equity")
+    unit_interval(max_single_asset_pct, "max_single_asset_pct")
+    positive(min_dscr, "min_dscr")
     _validate_columns(deals, {"equity_required", "minimum_dscr", "risk_adjusted_score"})
     if any(not math.isfinite(float(value)) for column in ("equity_required", "minimum_dscr", "risk_adjusted_score") for value in deals[column]):
         raise ValueError("portfolio inputs must be finite")
@@ -31,14 +34,15 @@ def allocate_capital(deals: pd.DataFrame, available_equity: float, max_single_as
         if total_score <= 0:
             break
         proposed = active_scores / total_score * remaining
-        capped = proposed[proposed > cap + 1e-9]
+        equity_caps = deals.loc[proposed.index, "equity_required"].astype(float).clip(upper=cap)
+        capped = proposed[proposed > equity_caps + 1e-9]
         if capped.empty:
             allocation.loc[proposed.index] += proposed
             remaining = 0.0
             break
         for idx in sorted(capped.index, key=str):
-            allocation.loc[idx] += cap
-            remaining -= cap
+            allocation.loc[idx] += float(equity_caps.loc[idx])
+            remaining -= float(equity_caps.loc[idx])
             active.remove(idx)
     return allocation
 
@@ -47,20 +51,60 @@ def portfolio_allocation(deals: pd.DataFrame, available_equity: float, max_singl
     """Return allocation, eligibility, and a reason for every constraint decision."""
     required = {"asset", "equity_required", "risk_adjusted_score", "levered_irr", "minimum_dscr"}
     _validate_columns(deals, required)
+    positive(available_equity, "available_equity")
+    unit_interval(max_single_asset_pct, "max_single_asset_pct")
+    positive(min_dscr, "min_dscr")
     output = deals.copy()
     output["capital_eligible"] = output["equity_required"] <= available_equity
     output["dscr_eligible"] = output["minimum_dscr"] >= min_dscr
     output["eligible"] = output["capital_eligible"] & output["dscr_eligible"]
     output["recommended_allocation"] = allocate_capital(output, available_equity, max_single_asset_pct, min_dscr)
     allocated = float(output["recommended_allocation"].sum())
+    unallocated = float(available_equity - allocated)
+    output["unallocated_equity"] = 0.0
     output["allocation_weight"] = output["recommended_allocation"] / allocated if allocated else 0.0
     output["constraint_flag"] = output.apply(lambda row: "Pass" if row["eligible"] and row["recommended_allocation"] > 0 else "Review", axis=1)
-    output["constraint_reason"] = output.apply(lambda row: "Allocated" if row["recommended_allocation"] > 0 else ("Capital limit" if not row["capital_eligible"] else ("DSCR gate" if not row["dscr_eligible"] else "No score / rationed")), axis=1)
+    output["constraint_reason"] = output.apply(
+        lambda row: (
+            "Equity requirement cap"
+            if row["recommended_allocation"] > 0 and row["recommended_allocation"] >= row["equity_required"] - 1e-9
+            else "Concentration cap"
+            if row["recommended_allocation"] > 0 and row["recommended_allocation"] >= available_equity * max_single_asset_pct - 1e-9
+            else "Allocated"
+            if row["recommended_allocation"] > 0
+            else "Capital limit"
+            if not row["capital_eligible"]
+            else "DSCR gate"
+            if not row["dscr_eligible"]
+            else "No score / rationed"
+        ),
+        axis=1,
+    )
+    if unallocated > 1e-9:
+        output = pd.concat([
+            output,
+            pd.DataFrame([{
+                "asset": "UNALLOCATED",
+                "equity_required": float("nan"),
+                "risk_adjusted_score": float("nan"),
+                "levered_irr": float("nan"),
+                "minimum_dscr": float("nan"),
+                "capital_eligible": False,
+                "dscr_eligible": False,
+                "eligible": False,
+                "recommended_allocation": 0.0,
+                "unallocated_equity": unallocated,
+                "allocation_weight": 0.0,
+                "constraint_flag": "SUMMARY",
+                "constraint_reason": "Available capital not allocated",
+            }], index=["UNALLOCATED"]),
+        ], ignore_index=False)
     return output
 
 
 def portfolio_risk_view(allocation: pd.DataFrame, min_dscr: float = 1.25) -> dict[str, float]:
     """Summarize financed exposure to return, coverage, and concentration risk."""
+    positive(min_dscr, "min_dscr")
     _validate_columns(allocation, {"recommended_allocation", "levered_irr", "minimum_dscr", "allocation_weight"})
     invested = allocation[allocation["recommended_allocation"] > 0]
     invested_capital = float(invested["recommended_allocation"].sum())

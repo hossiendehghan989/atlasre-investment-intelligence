@@ -1,11 +1,13 @@
 """Deterministic debt schedules and constraint-based sizing."""
 from __future__ import annotations
 
-from dataclasses import dataclass
 import math
+from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
+
+from .validation import integer, non_negative, unit_interval
 
 
 @dataclass(frozen=True)
@@ -17,10 +19,11 @@ class DebtTerms:
     lender_fee_pct: float = 0.01
 
     def validate(self) -> None:
-        if not all(math.isfinite(float(value)) for value in (self.annual_rate, self.lender_fee_pct)):
-            raise ValueError("debt rates and fees must be finite")
-        if self.annual_rate < 0 or self.amortization_years <= 0 or self.term_months <= 0:
-            raise ValueError("rate must be non-negative and timing inputs positive")
+        non_negative(self.annual_rate, "annual_rate")
+        unit_interval(self.lender_fee_pct, "lender_fee_pct")
+        integer(self.amortization_years, "amortization_years", minimum=1)
+        integer(self.term_months, "term_months", minimum=1)
+        integer(self.interest_only_months, "interest_only_months", minimum=0)
         if not 0 <= self.interest_only_months <= self.term_months:
             raise ValueError("interest_only_months must be within the loan term")
         if not 0 <= self.lender_fee_pct <= 1:
@@ -40,8 +43,7 @@ def _payment_factor(annual_rate: float, amortization_years: int) -> float:
 def monthly_debt_schedule(principal: float, terms: DebtTerms, draws: list[float] | None = None, noi: list[float] | None = None) -> pd.DataFrame:
     """Build a monthly balance, interest, principal, DSCR, and balloon schedule."""
     terms.validate()
-    if not math.isfinite(principal) or principal < 0:
-        raise ValueError("principal must be finite and non-negative")
+    non_negative(principal, "principal")
     draw_values = [0.0] * terms.term_months if draws is None else list(draws)
     if len(draw_values) != terms.term_months or any(not math.isfinite(float(value)) or value < 0 for value in draw_values):
         raise ValueError("draws must contain one finite non-negative value per term month")
