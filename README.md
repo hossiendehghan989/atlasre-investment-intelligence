@@ -2,86 +2,68 @@
 
 [![CI](https://github.com/hossiendehghan989/atlasre-investment-intelligence/actions/workflows/ci.yml/badge.svg)](https://github.com/hossiendehghan989/atlasre-investment-intelligence/actions/workflows/ci.yml)
 
-AtlasRE is a Python and Streamlit prototype for reviewing illustrative real-estate acquisition cases. Given explicit assumptions, it calculates annual acquisition cash flows, debt schedules, stress cases, selected risk summaries, and source-aware screening flags. It is decision support for a human reviewer; it is not an approval system, valuation opinion, or investment advice.
+AtlasRE is a Python and Streamlit prototype that calculates and records an **ILLUSTRATIVE** real-estate acquisition screening case from explicit assumptions.
 
-## Quickstart
-
-```bash
-python -m pip install -r requirements.txt
-python -m pip install -r requirements-test.txt
-python -m pytest -q
-ruff check .
-streamlit run dashboard.py
-```
-
-The dashboard runs locally. The report generator writes a package under `artifacts/`:
-
-```bash
-python generate_committee_report.py
-```
-
-All bundled inputs are illustrative unless a caller supplies and verifies source-backed data. The default screening case is intentionally marked `REVIEW REQUIRED`.
-
-**Live demo:** `[add deployment URL here]`
-
-## Screenshots
-
-The screenshots below were captured from the local Streamlit application with the default illustrative inputs.
-
-| View | Screenshot |
-| --- | --- |
-| Decision summary | ![Decision summary](docs/images/decision-summary.png) |
-| Downside and risk detail | ![Downside and risk](docs/images/downside-risk.png) |
-| Review package controls | ![Review package](docs/images/review-package.png) |
-
-## Capabilities
-
-| Area | Implemented behavior | Main boundary |
+| Decision summary | Downside view | Review files |
 | --- | --- | --- |
-| Acquisition | Annual NOI, growth, exit value, IRR, NPV, equity multiple, and DSCR | No asset-specific operating model, tax model, or valuation opinion |
-| Market screen | Normalized market score and risk-adjusted ranking | No live data or calibrated market forecast |
-| Debt | Monthly interest, amortization, IO, draws, balloon, DSCR, and LTV/DSCR sizing | No full debt stack, hedge, refinance, or loan-document covenant model |
-| Development | Monthly draws, contingency, capitalized interest, stabilization, and exit | No contract budget, change-order, or cost-to-complete control |
-| Waterfall | Return of capital, preferred return, ordered hurdles, promotes, and reconciliation | No legal-document mapping, clawbacks, or tax distributions |
-| Lease foundation | Rent roll, escalation, vacancy, rollover, monthly NOI, expiry flags, and optional NOI bridge | No TI/LC, recoveries, capex, full downtime, or tenant-credit evidence |
-| Risk | Named stress cases, seeded simulation, percentile tails, expected shortfall, and loss probabilities | No historical probability calibration |
-| Governance | Assumption register, lineage, source status, and deterministic run ID | No persistent approval ledger, RBAC, or retention service |
-| Portfolio | Capital allocation, DSCR eligibility, concentration diagnostics, and exposure view | `portfolio_exposure` remains a documented naive legacy screen; constrained allocation is in `src/portfolio.py` |
+| ![Decision summary](docs/images/decision-summary.png) | ![Downside view](docs/images/downside-risk.png) | ![Review package](docs/images/review-package.png) |
+
+## Try it in 60 seconds
+
+Run these commands from the repository root on Python 3.11 or 3.12.
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.lock && streamlit run dashboard.py
+```
+
+Open the local URL printed by Streamlit. Change an assumption, inspect the downside flags, select **Prepare review files**, and download the ZIP or formula-based Excel reconciliation workbook. Every bundled input and output remains **ILLUSTRATIVE**.
+
+## What the decision output looks like
+
+The default illustrative case displays a **REJECT / REWORK** status. Its flag list shows that the source package is not verified, unlevered net present value is negative, and levered internal rate of return is below the 12% hurdle. The dashboard shows the current default figures—11.97% levered IRR and $12,193,012 exit value—together with the assumptions that produced them. These figures are reproducible, not market evidence.
+
+## What is included
+
+| Area | Implemented behavior | Boundary |
+| --- | --- | --- |
+| Acquisition | Annual NOI, terminal value, levered and unlevered cash flows, IRR, NPV, equity multiple, and DSCR | No tax, capex reserve, property-level operating statement, or valuation opinion |
+| Debt | Monthly payment, interest, amortization, balloon balance, annual debt roll-up, and LTV/DSCR sizing | No debt stack, hedge, refinance, or loan-document covenant model |
+| Downside | Named stress cases plus seeded, reproducible Monte Carlo risk summaries | No historical probability calibration |
+| Governance | Assumption register, source-status gate, lineage, and run fingerprint | No persistent approval ledger, RBAC, or retention service |
+| Review package | IC memo, assumptions, risk summary, annual debt schedule, lease references, Excel reconciliation workbook, and ZIP download | Source status remains `REVIEW REQUIRED` unless caller supplies reviewer and source reference |
+| Excel reconciliation | Live formulas for annual NOI, monthly debt, IRR, NPV, PMT, IPMT, PPMT, equity multiple, and formula-to-model differences | Workbook must be recalculated in Excel or LibreOffice; it does not validate source documents |
+| Lease and portfolio | Illustrative rent-roll bridge, allocation checks, and concentration diagnostics | No complete lease economics, tenant-credit evidence, or multi-period fund optimizer |
+
+## Why this exists / how it differs from a spreadsheet
+
+AtlasRE keeps explicit inputs, a deterministic run fingerprint, source-status gating, downside-first summaries, automated tests, and generated review artifacts in one version-controlled codebase. A spreadsheet can also implement those controls; this repository instead expresses them as code and tests. It does **not** replace a complete underwriting workbook, verified source documents, a valuation process, legal or tax diligence, investment-committee judgment, or specialized real-estate software.
+
+## Modeling conventions
+
+The supplied annual NOI is year-one NOI. Growth begins in year two. Exit value is final-year NOI divided by exit cap rate. Acquisition and selling costs are percentages of price and exit value, respectively. The core loan is a single amortizing loan calculated monthly. The Excel workbook follows the same conventions and places its live formula result beside the static Python model output. See [the reviewer guide](docs/REVIEWER_GUIDE.md) for formula locations and reconciliation steps.
+
+## Limitations and data boundary
+
+This is a single-user, local prototype. It has no authentication, immutable audit store, source-document ingestion, live market data, OCR, accounting integration, tax model, FX model, complete lease economics, construction-to-permanent debt, mezzanine or preferred equity, persistent approvals, or production authorization controls. The seeded simulation is reproducible, but it is not calibrated to observed market outcomes. No output is investment advice or an approval.
+
+## Testing and deployment
+
+The test suite has **102 tests**. CI installs `requirements.lock`, runs `ruff check .`, and runs `python -m pytest -q`. The current package benchmark and reproducibility evidence are documented in [CHANGELOG.md](CHANGELOG.md). For Streamlit Community Cloud settings and deployment steps, see [DEPLOY.md](DEPLOY.md). The generated [illustrative sample package](docs/sample_output/README_ILLUSTRATIVE.md) and [demo script](docs/DEMO_SCRIPT.md) are available for review.
 
 ## Repository layout
 
 ```text
-src/atlasre.py                 acquisition underwriting and market scoring
+src/atlasre.py                 core acquisition underwriting
+src/advanced_underwriting.py   seeded simulation, stress cases, and risk summaries
 src/debt.py                    monthly debt schedules and debt sizing
-src/advanced_underwriting.py   stress cases, simulation, and risk summaries
-src/institutional.py           development schedules and waterfalls
-src/lease.py                   rent-roll foundation
-src/governance.py              assumptions, lineage, and run fingerprints
-src/ic_workflow.py             screening flags, comparison, and memo generation
-src/portfolio.py               constrained allocation and portfolio diagnostics
-dashboard.py                  Streamlit interface
-generate_committee_report.py  Markdown/CSV/JSON/ZIP package generator
-tests/                        regression, adversarial, and independent checks
-docs/                         audit, case study, architecture, and screenshots
+src/reconciliation.py          formula-based Excel reconciliation workbook
+generate_committee_report.py   package generator
+dashboard.py                   Streamlit interface
+tests/                         regression and independent cross-checks
+docs/                          reviewer, demo, deployment, and sample materials
 ```
-
-## Modeling conventions
-
-The core acquisition model treats the supplied annual NOI as year-one NOI; growth is applied from year two onward. Acquisition and selling costs are percentage assumptions. Exit value is terminal NOI divided by exit cap rate. Debt is modeled as a single amortizing loan with monthly payment mechanics. Portfolio exposure in `src/atlasre.py` is intentionally a naive score-weighted screen; the constrained allocator is separate. See [ATLASRE_ARCHITECTURE.md](ATLASRE_ARCHITECTURE.md) for the complete simplification inventory.
-
-## Case study
-
-See [docs/case_study.md](docs/case_study.md) for one worked **ILLUSTRATIVE** case, including assumptions, outputs, screening flags, and independent numerical checks. It is not a real transaction.
-
-## Known limitations
-
-AtlasRE is a single-user local tool with no authentication or RBAC, no immutable audit store, and illustrative data only. It is not independently validated by a finance professional. It does not ingest live market data or source documents. It does not provide OCR, accounting, tax, FX, complete commercial lease economics, construction-to-permanent debt, mezzanine or preferred-equity stacks, refinance modeling, persistent approvals, production identity and access controls, or a multi-period fund optimizer. The simulation is seeded and reproducible but is not calibrated to observed market outcomes.
-
-A deployment would require source-controlled ingestion, document and calculation reconciliation, independent model validation, persistent governance, formal authorization, monitoring, and firm-specific policies. No output should be circulated as an investment recommendation without those controls.
-
-## Testing
-
-The local branch currently passes **98 tests**. The suite covers acquisition math, debt, development, waterfalls, leases, governance, portfolio behavior, adversarial inputs, source evidence, validation boundaries, year-one NOI timing, equity contributions, and independent IRR/NPV/debt cross-checks. CI installs the lock file and runs `pytest -q` and `ruff check .` on pushes and pull requests.
 
 ## License
 

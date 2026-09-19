@@ -1,5 +1,30 @@
 # Changelog
 
+## review-fixes — review package, reconciliation, and deployment preparation
+
+### Current illustrative outputs and screenshot correction
+
+The earlier committed dashboard images were stale. They showed a 13.21% levered IRR and a $12,558,802 exit value, while the current default core model run uses 11.97% levered IRR and a $12,193,012 exit value. The regenerated images under `docs/images/` match the current default `DealInputs(10_000_000, 650_000, hold_years=5, leverage=0.5)` run and the values in the generated package. This entry documents a screenshot correction, not a new economic claim.
+
+### Added
+
+- Added a formula-based Excel reconciliation workbook with Input, Annual NOI, Debt Schedule, Cash Flows, Reconciliation, and Lineage sheets. It uses live Excel `IRR`, `NPV`, `PMT`, `IPMT`, and `PPMT` formulas alongside static Python model outputs and difference checks.
+- Added an ILLUSTRATIVE IC memo, annual debt schedule, workbook, and package readme to the generated review ZIP.
+- Added an independent reviewer guide, two-minute demo script, deployment guide, neutral Streamlit configuration, and committed ILLUSTRATIVE sample output.
+- Added a dashboard progress status, package-input staleness check, direct Excel download, and an in-dashboard memo preview.
+
+### Performance evidence
+
+On Python 3.12 in the release environment, `python generate_committee_report.py` took **86.66 seconds** before the change and **2.14 seconds** after the change. Both runs used the default 5,000 seeded simulations. The default package remains reproducible: the regression test locks the prior risk-summary outputs for the default case.
+
+The before profile recorded 5,143,693 calls to `_npv`, primarily from calling the scalar IRR scan for every simulation. The updated profile records 62,487 `_npv` calls: a vectorized rate-grid evaluation finds the same first bracket for each scenario and the existing scalar root solver refines only that bracket. File generation is not a material runtime contributor.
+
+### Validation at the time of this entry
+
+- 102 tests passed locally.
+- `ruff check .` passed locally.
+- The Streamlit dashboard was launched locally and the four current images were captured at 1440 pixels wide from the running default illustrative case.
+
 ## review-fixes — post-review hardening
 
 - Added an explicit `UNALLOCATED` portfolio summary row and reconciliation coverage.
