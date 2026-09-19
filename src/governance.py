@@ -44,12 +44,13 @@ class Assumption:
     notes: str = ""
 
 
-def versioned_assumptions(values: dict[str, tuple[Any, str]], deal_id: str = "UNASSIGNED", version: int = 1, source: str = "Illustrative input", verified_by: str = "") -> pd.DataFrame:
+def versioned_assumptions(values: dict[str, tuple[Any, str]], deal_id: str = "UNASSIGNED", version: int = 1, source: str = "Illustrative input", verified_by: str = "", supersedes: dict[str, str] | None = None) -> pd.DataFrame:
     """Create stable assumption IDs and an explicit verification state."""
     if not deal_id or version < 1 or not source:
         raise ValueError("deal_id, version, and source are required")
     now = datetime.now(timezone.utc).isoformat()
-    rows = [asdict(Assumption(f"{deal_id}:{name}:v{version}", name, value, unit, version, source, "VERIFIED" if verified_by else "REVIEW REQUIRED", "Investment team", verified_by, now)) for name, (value, unit) in values.items()]
+    supersedes = supersedes or {}
+    rows = [asdict(Assumption(f"{deal_id}:{name}:v{version}", name, value, unit, version, source, "VERIFIED" if verified_by else "REVIEW REQUIRED", "Investment team", verified_by, now, supersedes.get(name, ""))) for name, (value, unit) in values.items()]
     return pd.DataFrame(rows)
 
 

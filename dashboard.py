@@ -3,14 +3,16 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from src.advanced_underwriting import DevelopmentInputs, monte_carlo_underwriting, risk_summary, stress_test
+from src.advanced_underwriting import DevelopmentInputs, development_feasibility, monte_carlo_underwriting, risk_summary, stress_test
 from src.atlasre import DealInputs, rank_markets, scenario_matrix, underwrite_deal
 from src.committee_analytics import investment_committee_summary, sensitivity_table
 from src.debt import DebtTerms, monthly_debt_schedule, size_debt_from_constraints
 from src.governance import assumption_register, default_lineage, ic_workflow, lineage_json, model_run_fingerprint
-from src.ic_workflow import DealCase, compare_deals, generate_ic_memo
+from src.ic_workflow import DealCase, compare_deals, generate_ic_memo, screen_case
 from src.institutional import MonthlyDevelopmentInputs, WaterfallTier, monthly_development_model, multi_tier_waterfall, size_debt
+from src.lease import illustrative_rent_roll, lease_rollup, lease_summary
 from src.portfolio import portfolio_allocation, portfolio_risk_view, portfolio_snapshot
+from generate_committee_report import screening_package_zip
 
 st.set_page_config(page_title="AtlasRE Investment Intelligence", page_icon="◆", layout="wide")
 
@@ -31,8 +33,19 @@ with st.sidebar:
 base_deal = DealInputs(price, noi, hold, growth, exit_cap, hurdle - 0.02, 0.03, 0.02, leverage)
 underwriting = underwrite_deal(base_deal)
 committee = investment_committee_summary(base_deal, hurdle)
+current_case = DealCase("ATLAS-001", "Core-plus screening case", base_deal)
+screen = screen_case(current_case)
 
-st.markdown("### Decision surface")
+st.markdown("### Investment Committee decision surface")
+st.warning(f"Decision status: **{screen['status']}** · Source status: **{current_case.source_status}**")
+st.caption("Downside and governance gates are shown before base-case upside. Illustrative inputs require source verification.")
+decision_cols = st.columns(4)
+decision_cols[0].metric("Negative NPV", f"${underwriting['unlevered_npv']:,.0f}")
+decision_cols[1].metric("Minimum DSCR", f"{underwriting['minimum_dscr']:.2f}x")
+decision_cols[2].metric("Exit cap break-even", f"{committee['break_even_exit_cap']:.2%}")
+decision_cols[3].download_button("Download IC screening package", screening_package_zip(base_deal), file_name="atlasre-screening-package.zip", mime="application/zip")
+
+st.markdown("### Base-case economic results")
 metric_cols = st.columns(6)
 metric_cols[0].metric("Entry cap", f"{underwriting['entry_cap_rate']:.2%}")
 metric_cols[1].metric("Levered IRR", f"{underwriting['levered_irr']:.2%}")
@@ -107,6 +120,11 @@ with development_tab:
     waterfall_cols[2].metric("Return of capital", f"${waterfall['return_of_capital']:,.0f}")
     waterfall_cols[3].metric("Distribution check", f"${waterfall['distribution_check']:,.0f}")
     st.dataframe(pd.DataFrame(waterfall["tiers"]).style.format({"hurdle_rate": "{:.1%}", "promote_pct": "{:.1%}", "tier_cash": "${:,.0f}", "lp_share": "${:,.0f}", "gp_share": "${:,.0f}"}), use_container_width=True, hide_index=True)
+    st.subheader("Illustrative lease-level foundation")
+    st.caption("Demo rent roll only. It is not verified tenant data and does not replace TI/LC, downtime, recoveries, capex, or credit diligence.")
+    demo_leases = illustrative_rent_roll()
+    st.dataframe(lease_summary(demo_leases).style.format({"annual_rent": "${:,.0f}", "annual_escalation": "{:.1%}", "vacancy_assumption": "{:.1%}"}), use_container_width=True, hide_index=True)
+    st.dataframe(lease_rollup(demo_leases, demo_leases[0].start, 12, operating_expense_ratio=.20).style.format({"contract_rent": "${:,.0f}", "vacancy": "${:,.0f}", "effective_rent": "${:,.0f}", "operating_expenses": "${:,.0f}", "noi": "${:,.0f}"}), use_container_width=True, hide_index=True)
 
 with portfolio_tab:
     st.subheader("Portfolio impact")
@@ -140,7 +158,6 @@ with governance_tab:
     st.json(default_lineage())
     st.download_button("Download lineage JSON", lineage_json(default_lineage()), file_name="atlasre-lineage.json", mime="application/json")
     st.caption(f"Model-run fingerprint: `{model_run_fingerprint('deterministic-core-v1', assumptions, default_lineage())[:16]}`")
-    current_case = DealCase("ATLAS-001", "Core-plus screening case", base_deal)
     comparison_case = DealCase("ATLAS-002", "Higher-growth challenge case", DealInputs(price * 1.05, noi * 1.08, hold, growth + 0.01, exit_cap - 0.005, hurdle - 0.02, 0.03, 0.02, leverage))
     st.markdown("**Side-by-side deal comparison**")
     st.dataframe(compare_deals([current_case, comparison_case], hurdle).style.format({"entry_cap": "{:.2%}", "levered_irr": "{:.2%}", "unlevered_irr": "{:.2%}", "equity_multiple": "{:.2f}x", "minimum_dscr": "{:.2f}x", "unlevered_npv": "${:,.0f}"}), use_container_width=True, hide_index=True)
@@ -155,4 +172,4 @@ with markets_tab:
     st.caption("Market inputs are illustrative placeholders; production ingestion must attach timestamped sources and confidence scores.")
 
 st.divider()
-st.caption("AtlasRE v0.3 · deterministic financial core + explicit governance primitives · illustrative data only")
+st.caption("AtlasRE v0.8 · deterministic financial core + source-aware governance + auditable IC screening · illustrative data only")

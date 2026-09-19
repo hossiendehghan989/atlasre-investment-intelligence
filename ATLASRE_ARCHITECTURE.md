@@ -1,98 +1,109 @@
-# AtlasRE Investment Intelligence — Institutional Evolution
+# AtlasRE Investment Intelligence — Architecture and Controls
 
-## 1. Current strengths
+## Executive position
 
-AtlasRE already had a strong, unusually transparent foundation for a portfolio prototype: the Python engine separates assumptions from calculations; the underwriting layer reports both levered and unlevered outcomes; the development module includes draws, capitalized interest, stabilization and a promote waterfall; and the risk layer is reproducible through seeded simulation. The test suite covers the highest-value financial behaviors rather than only UI paths.
+AtlasRE is a **deterministic analytical prototype for real-estate investment committee screening**. The architecture keeps financial calculations in small, inspectable Python modules and uses Streamlit as the decision surface. Governance and source status are treated as model inputs rather than presentation metadata.
 
-The gap was not another valuation formula. The gap was operating-model completeness: source lineage, versioned assumptions, a portfolio constraint layer, and a committee workflow that records what was decided and why. This iteration addresses those gaps without replacing the tested financial core.
+The system is designed to answer a narrow question well: *given explicit assumptions, what does the model say, how fragile is the result, what constraints bind, and what must be verified before a human decision?* It is not a production investment platform and does not claim to replace diligence, approval, or independent model validation.
 
-## 2. Opinionated target architecture
+## Current architecture
 
-| Layer | Current implementation | Production direction |
+```text
+Illustrative or reviewed inputs
+            |
+            v
+Assumption register + source status + version
+            |
+            v
+Deterministic financial engines
+  ├─ acquisition underwriting and IRR/NPV
+  ├─ monthly debt and constraint sizing
+  ├─ monthly development and capitalized interest
+  ├─ LP/GP waterfall
+  ├─ optional lease-level rent-roll roll-up
+  └─ scenarios, stress, correlated simulation
+            |
+            v
+Governance layer
+  ├─ lineage records
+  ├─ model-run fingerprint
+  └─ tamper-evident audit primitives
+            |
+            v
+Decision layer
+  ├─ source-aware IC screening
+  ├─ downside-first memo/package
+  ├─ side-by-side comparison
+  └─ constrained portfolio allocation and risk view
+            |
+            v
+Streamlit dashboard + CSV/JSON/Markdown artifacts
+```
+
+## Module boundaries
+
+| Module | Responsibility | Deliberate boundary |
 | --- | --- | --- |
-| Experience | Streamlit decision surface | Next.js / React shell with role-aware IC workspace |
-| API | Python functions called by Streamlit | FastAPI contracts around `src/` engines |
-| Financial core | `src/atlasre.py`, `advanced_underwriting.py`, `institutional.py` | Versioned Python package with typed scenario inputs |
-| Persistence | CSV and generated artifacts | PostgreSQL + PostGIS for assets, assumptions, sources, decisions |
-| Semantic intelligence | Not yet persisted | Object storage + OCR + embeddings in pgvector |
-| Governance | New register, lineage, hash-chain primitives | Immutable event store with signed review checkpoints |
-| Orchestration | Deterministic modules | LangGraph-style agents with tool permissions and citations |
+| `src/atlasre.py` | Acquisition cash flows, debt-linked annual underwriting, IRR/NPV, market scoring | Does not ingest documents or make approval decisions |
+| `src/debt.py` | Monthly debt schedule, draws, IO, amortization, balloon and DSCR/LTV sizing | Does not infer missing loan terms |
+| `src/advanced_underwriting.py` | Development screen, seeded correlated simulation, stress and tail metrics | Does not claim probability calibration from live markets |
+| `src/institutional.py` | Monthly development and multi-tier waterfall | Does not replace project-specific legal waterfall language |
+| `src/lease.py` | Validated rent-roll foundation and monthly rent/NOI roll-up | Does not silently override simplified underwriting |
+| `src/governance.py` | Assumptions, lineage, audit chain, reproducibility fingerprint | Does not provide persistent server-side approvals |
+| `src/ic_workflow.py` | Source-aware flags, comparison, decision states, screening memo | Does not approve or transmit a transaction |
+| `src/portfolio.py` | Capital rationing, concentration, DSCR gates, exposure diagnostics | Does not optimize a multi-period fund portfolio |
+| `generate_committee_report.py` | Reproducible Markdown/CSV/JSON/ZIP screening package | Does not certify source data |
+| `dashboard.py` | Streamlit interaction and visual decision surface | Does not contain financial formulas as a second source of truth |
 
-The financial core remains deterministic. AI may extract, compare, summarize and propose; it must never silently mutate a model assumption or hide a source.
+## Control principles
 
-## 3. High-level schema
+1. **Downside precedes upside.** Critical flags, source status, DSCR, NPV, stress cases, and tail risk appear before attractive base-case return metrics.
+2. **Source status is a gate.** `REVIEW REQUIRED` is not equivalent to `VERIFIED`; an unverified deal cannot automatically pass the initial screen.
+3. **Periodicity is explicit.** Monthly schedules remain monthly. Reported monthly IRRs are annualized only at the presentation boundary.
+4. **Constraints are visible.** Debt sizing identifies its binding constraint. Portfolio allocation retains eligibility and exclusion reasons.
+5. **Outputs are challengeable.** Important outputs carry lineage fields, assumption versions, and a deterministic model-run fingerprint.
+6. **Illustrative data is labeled.** The system does not convert an illustrative default into a verified fact through formatting.
+7. **Invalid states fail loudly.** Non-finite values, malformed schedules, invalid dates, and malformed governance records are rejected or explicitly marked invalid.
 
-- `assets`: canonical property identity, address, geography, asset type and identity-resolution confidence.
-- `deals`: transaction, status, sponsor, strategy, version pointer and current IC stage.
-- `documents`: uploaded file metadata, checksum, OCR status, extraction confidence and storage URI.
-- `document_facts`: extracted values with page/cell citation, confidence and reviewer status.
-- `assumptions`: deal/version/field/value/unit/source/status/owner and supersession links.
-- `scenarios`: scenario name, shock vector, model version and generated outputs.
-- `portfolio_constraints`: LTV, DSCR, concentration, liquidity and ESG limits.
-- `ic_decisions`: stage, decision, conditions, decision-maker and timestamp.
-- `audit_events`: append-only hash-chained events for every material change.
+## Current capabilities versus production gaps
 
-## 4. Agent architecture
+| Capability | Current state | Production gap |
+| --- | --- | --- |
+| Acquisition underwriting | Deterministic annual model with IRR, NPV, leverage, exit value and DSCR | Independent validation, accounting and tax treatment |
+| Debt | Monthly IO/amortization/draw/balloon schedule and LTV/DSCR sizing | Full debt stack, covenants, hedging, refinance, term-sheet ingestion |
+| Development | Monthly draws, contingency, capitalized interest, stabilization and exit | Contract-level budget, change orders, schedule risk, cost-to-complete controls |
+| Waterfall | Multi-tier return of capital, pref, hurdles, promote and reconciliation | Legal-document mapping, tax distributions, clawbacks, catch-ups and escrow terms |
+| Lease-level foundation | Rent roll, escalations, vacancy, credit flag and monthly NOI proxy | Rollover economics, downtime, TI/LC, rent-free, recoveries, tenant credit and capex |
+| Risk | Seeded correlated shocks, tails, expected shortfall, stress and DSCR breach probability | Calibrated distributions, historical validation, liquidity and drawdown modeling |
+| Governance | Versioned assumptions, lineage, audit hash chain and fingerprint | Persistent immutable event store, identity, roles, approvals and retention policy |
+| IC workflow | Source-aware flags, comparison, screening memo and ZIP package | Human approval workflow, conditions precedent, decision history and permissions |
+| Portfolio | Concentration cap, DSCR gate, capital rationing, HHI and exposure view | Multi-period optimizer, liquidity, capital calls, covariance and fund obligations |
+| Data | Illustrative CSV and explicit user inputs | Source connectors, document extraction, citations, timestamps and confidence review |
 
-1. **Document Agent** extracts facts and citations; it can create review-required facts but cannot approve them.
-2. **Market Research Agent** assembles market evidence, normalizes timestamps and flags stale or illustrative sources.
-3. **Underwriting Agent** maps approved facts into a typed assumption register and calls deterministic engines.
-4. **Risk Agent** runs sensitivity, stress and Monte Carlo analysis and writes downside-first findings.
-5. **Portfolio Impact Agent** tests allocation under real constraints and concentration limits.
-6. **IC Memo Agent** renders a memo from approved outputs, with every claim linked to a lineage record.
+## Six-to-ten-week highest-ROI roadmap
 
-Each agent emits `{claim, inputs, method, source_refs, confidence, reviewer_status}`. The orchestration layer rejects outputs without source references or assumption IDs.
+| Timing | Outcome | Control objective |
+| --- | --- | --- |
+| Weeks 1–2 | Persistent model-run and assumption store | Immutable versioning, actor identity, source files, approval states and reproducible reruns |
+| Weeks 2–4 | Commercial lease economics | Rollover, downtime, TI/LC, recoveries, capex and tenant-level evidence with tests |
+| Weeks 4–6 | Real debt-stack and development controls | Construction-to-perm, mezz/preferred equity, covenants, refinance and cost-to-complete |
+| Weeks 6–8 | Source-controlled ingestion and validation | Excel/PDF inputs with citations, reviewer queue, stale-data flags and reconciliation |
+| Weeks 8–10 | Portfolio and IC operating workflow | Multi-period capital allocation, approval conditions, variance monitoring and audit reporting |
 
-## 5. 8–12 week build order
+A FastAPI boundary, database, and document layer are plausible future directions, but they are not prerequisites for improving the deterministic engines and should not be introduced as cosmetic migrations.
 
-| Phase | Weeks | Outcome |
-| --- | ---: | --- |
-| Foundation | 1–2 | FastAPI boundary, Postgres schema, asset/deal versioning, audit events |
-| Document intelligence | 3–4 | PDF/Excel ingestion, OCR, cited extraction and review queue |
-| Underwriting productization | 5–6 | Lease-level monthly model, debt stack, waterfall and API contracts |
-| Risk and portfolio | 7–8 | Correlated Monte Carlo, portfolio optimizer, early-warning rules |
-| IC workflow | 9–10 | Role-based gates, side-by-side comparison, memo generation |
-| Monitoring and reporting | 11–12 | Actual-vs-underwritten variance, investor reporting, observability |
+## Phase 0 current gaps note
 
-## 6. Open-source shortlist
+The baseline audit found that the financial core and tests were ahead of several user-facing artifacts. The dashboard footer still carried a v0.3 label, the report generator omitted newer tail and governance outputs, and the dashboard referenced the development function without importing it. The executive documentation also described the project historically rather than as the current v0.9 analytical prototype. This release corrects those mismatches and adds a small lease-level foundation without changing the simplified path.
 
-- **FastAPI, Pydantic, SQLAlchemy/SQLModel** for typed API boundaries.
-- **PostgreSQL, PostGIS, pgvector** for transactional, geospatial and semantic retrieval needs.
-- **pypdf, openpyxl, OCRmyPDF/Tesseract** for document processing with reviewable citations.
-- **LangGraph** for explicit stateful agent orchestration and human approval checkpoints.
-- **NumPy, pandas, SciPy, NumPyro/PyMC** for deterministic and probabilistic financial analysis.
-- **OpenTelemetry and Evidently** for tracing model runs and monitoring data drift.
+## How to challenge a model run
 
-## 7. Non-negotiable controls
+A reviewer should first inspect source status and the model-run fingerprint. Next, review the assumption register and lineage for purchase price, NOI, growth, exit cap, leverage, debt terms, and terminal value. Then examine minimum DSCR, negative NPV, stress cases, expected shortfall, and portfolio exposure. Only after those checks should the committee discuss base-case IRR and upside. Any change in a material assumption requires a new version and a new fingerprint.
 
-No recommendation without a cited source or an explicit `REVIEW REQUIRED` label. No model output without an assumption version. No IC approval without a recorded decision, actor, timestamp and audit hash. Downside cases appear before upside cases in every review surface.
+## Explicit non-claims
 
-This repository remains an analytical prototype, not investment, legal, tax or engineering advice.
-"""}}]} ts=multi_tool_use.parallel.parallel  code/analysis  代 result  code: 400 ฝ่ายขายละคร: Invalid tool parameters. Need due malformed first tool in batch maybe JSON issue caused all? Need retry only failed? It says invalid tool params no execution likely. Use write calls individually or parallel with correct. First had weird. Do 3 calls. is code okay? Need ensure first content string. Let's call.Xitsonga. First tool payload likely bad JSON due accidental `{
+AtlasRE does not claim production readiness, live-data accuracy, investment advice, legal or tax compliance, complete lease underwriting, persistent approval controls, or a calibrated market probability model. Those are engineering and governance deliverables for a later system, not features to imply through documentation.
 
+## References
 
-## Implemented hardening in v0.4
-
-The repository now contains a dedicated `src/debt.py` engine for monthly loan schedules, interest-only periods, balloon maturity, DSCR observations, and binding LTV-versus-DSCR sizing. `src/ic_workflow.py` adds deterministic side-by-side deal comparison, explicit severity-ranked screening flags, and a downside-first screening memo generator. `src/governance.py` now creates stable assumption IDs with version, effective timestamp, source, reviewer and supersession fields. `src/portfolio.py` uses an active-set allocator that re-allocates around concentration caps and excludes assets that fail the minimum DSCR gate.
-
-These are working calculations and outputs, not simulated agents. AI orchestration remains deliberately outside the repository until document extraction, source storage, reviewer permissions, and a reproducible model-run contract are implemented.
-
-
-## Quant-control decisions in v0.5
-
-The model treats periodicity as a first-class control. Monthly development cash flows are modeled at monthly frequency, loan interest accrues on post-draw balances, and reported IRRs are annualized from monthly IRRs. Debt sizing uses the weakest modeled NOI period for DSCR capacity and reports the binding LTV or DSCR constraint. Waterfall distributions are checked against total distributable cash, and promote is applied only to profit above the applicable hurdle. Correlated Monte Carlo shocks are seeded for reproducibility and expose tail and covenant-breach statistics rather than only a mean case.
-
-
-## v0.6 control surface
-
-The reference implementation now treats invalid numerical inputs as model errors rather than silently clipped values. IRR root-finding is bracket-scanned, zero-rate debt is a supported limiting case, and debt schedule vectors are length- and finiteness-checked. Market scores require normalized finite factors and weights that sum to one. Audit verification is defensive against malformed events, lineage requires explicit input assumptions, and portfolio allocation is deterministic for repeated identical inputs.
-
-
-## v0.7 decision controls
-
-A model passing economic thresholds is not equivalent to an investable recommendation. The IC layer therefore treats source verification as a separate gate and reports governance flags alongside return and coverage flags. A case cannot pass the initial screen while its source package remains unverified. Risk review includes expected shortfall, not only percentile summaries, and every assumption snapshot plus lineage set can be hashed into a model-run fingerprint for reproducibility.
-
-
-## v0.8 portfolio control surface
-
-Portfolio allocation now separates capital eligibility, DSCR eligibility, and actual allocation. It reports risk exposure on invested capital through DSCR-breach share, negative-IRR share, concentration HHI, and maximum asset weight. Constraint reasons are retained per asset so excluded capital is explainable rather than silently disappearing.
+[1]: https://github.com/hossiendehghan989/atlasre-investment-intelligence "AtlasRE Investment Intelligence repository"

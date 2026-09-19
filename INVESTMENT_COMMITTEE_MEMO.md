@@ -1,31 +1,51 @@
-# AtlasRE: Executive Project Brief
+# AtlasRE Investment Intelligence — Executive Investment Committee Brief
 
-## The one-minute pitch
+## Executive position
 
-AtlasRE is a transparent investment-intelligence prototype for comparing real-estate opportunities across markets. It converts a small set of investment assumptions into a decision surface that shows return, leverage, terminal-value sensitivity, market risk, and capital-allocation implications.
+AtlasRE is a **transparent, deterministic decision-support prototype** for real-estate investment screening. It is built to help a principal or committee challenge assumptions before committing diligence time or capital. It is not an approval system, a valuation opinion, or investment advice.
 
-The purpose is not to replace an investment committee. The purpose is to make the committee's assumptions visible, comparable, and easier to challenge before capital is committed. The latest version adds monthly development draws, construction debt, capitalized interest, DSCR-constrained debt sizing, LP/GP distributions, and a generated committee report.
+The current release combines annual acquisition underwriting, monthly debt and development schedules, a multi-tier LP/GP waterfall, seeded correlated risk analysis, source-aware governance gates, a small lease-level foundation, and constrained portfolio diagnostics.
 
-## What an executive sees first
+## What the committee sees first
 
-A decision-maker can change the purchase price, NOI, growth rate, hold period, exit cap, and leverage. The system immediately answers five practical questions:
+The decision surface is intentionally downside-first. It presents the source status and decision state before base-case returns. It then exposes critical economic flags, governance flags, negative NPV, minimum DSCR, exit-cap break-even, stress cases, expected shortfall, DSCR-breach probability, and portfolio concentration. A verified source package is a prerequisite for an automatic initial-screen pass.
 
-1. What is the entry yield?
-2. What return is generated before and after leverage?
-3. How much does the outcome depend on the exit cap and NOI growth?
-4. Which markets rank better after risk adjustment?
-5. How should a limited capital budget be distributed across eligible opportunities?
+The downloadable screening package includes the executive report, assumptions, lineage, risk summary, stress cases, and monthly development reference schedule. Its model-run fingerprint provides a reproducibility handle for the exact model version, assumption snapshot, and lineage set used in the package.
 
-## Why this is a credible portfolio artifact
+## Questions the model can answer
 
-The project makes no unsupported claim about private assets, transaction history, or investment performance. It uses illustrative defaults and clearly separates them from the calculation engine. That discipline is important in real estate, where a polished model can create false confidence if assumptions are hidden.
+A reviewer can change purchase price, NOI, growth, hold period, exit cap, leverage, and hurdle assumptions. The system can then show:
 
-The code is modular and tested. The dashboard is usable without reading the source first. The model is simple enough to audit and extensible enough to accept verified market data, asset-level operating statements, development budgets, financing terms, and legal due-diligence outputs.
+- whether the simplified acquisition case clears configured economic gates;
+- how much value depends on the terminal exit cap and NOI path;
+- whether debt coverage or LTV is the binding sizing constraint;
+- how the outcome behaves under rate, cost, growth, and exit-cap stress;
+- what the worst simulated 10% of IRR and NPV outcomes look like;
+- which portfolio assets are eligible, capped, rationed, or excluded;
+- how much invested capital is exposed to DSCR breach or negative IRR.
 
-## A natural next step for a real firm
+These answers remain conditional on the supplied assumptions. They do not establish that the assumptions are true.
 
-A real deployment could connect verified market feeds and internal deal data, then add development draw schedules, construction risk, FX scenarios, waterfall economics, debt refinancing, and investment-committee approval logs. The prototype deliberately stops before those claims because they require real source data and firm-specific governance.
+## How to present a case to an Investment Committee
 
-## Presentation line
+Begin with source status and the decision state. If the case is `REVIEW REQUIRED`, say that before showing returns. Walk through critical flags and the minimum DSCR. Review negative NPV, the exit-cap break-even, stress cases, expected shortfall, and any portfolio concentration. Then review base-case IRR and equity multiple. Finish by agreeing on the diligence that could change the decision and record the assumption version and model fingerprint.
 
-> I built AtlasRE to show how I think about investment intelligence: start with transparent assumptions, make downside visible, separate operating performance from leverage, rank opportunities consistently, and give decision-makers a model they can challenge rather than a black box they must trust.
+A committee should challenge the terminal value, the operating income path, the debt terms, the timing of cash flows, and the evidence supporting market assumptions. A polished output is not evidence of a verified deal.
+
+## Current strengths
+
+The financial engines are small enough to inspect and are covered by adversarial tests. Monthly debt interest, principal, draws, IO periods, amortization, and balloon balances are visible. Development schedules separate costs, draws, capitalized interest, stabilization, and exit. Waterfall distributions reconcile to available cash. Risk simulation is seeded and reports tails rather than only a median. Governance records assumptions, lineage, source status, audit hashes, and a model-run fingerprint.
+
+The optional lease module is a foundation rather than a full rent-roll product. It supports multiple leases, dates, escalations, vacancy assumptions, credit-quality labels, and monthly NOI roll-up. The existing simplified annual-NOI path remains explicit and unchanged.
+
+## Remaining limitations
+
+The repository is an advanced analytical prototype. It does not provide live market data, document extraction, persistent approval records, production identity and access control, complete commercial lease economics, tax or FX modeling, a full construction debt stack, or a multi-period fund optimizer. It must not be used as a substitute for independent model validation or legal, tax, engineering, environmental, insurance, or market diligence.
+
+## Resume-ready description
+
+> Built AtlasRE, a deterministic real-estate investment intelligence prototype with monthly debt and development underwriting, multi-tier LP/GP waterfall economics, seeded correlated risk simulation with expected shortfall, source-aware IC decision gates, reproducibility fingerprints, lease-level NOI foundations, and constrained portfolio risk diagnostics. Designed the system around auditable assumptions, explicit downside, and adversarial tests rather than opaque automation.
+
+## References
+
+[1]: https://github.com/hossiendehghan989/atlasre-investment-intelligence "AtlasRE Investment Intelligence repository"

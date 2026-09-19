@@ -25,9 +25,10 @@ def test_governance_rejects_malformed_audit_and_tracks_version():
     assert verify_audit_chain([first])
     malformed = {"action": "created"}
     assert not verify_audit_chain([malformed])
-    register = versioned_assumptions({"exit_cap": (.06, "%")}, deal_id="A", version=3, verified_by="reviewer")
+    register = versioned_assumptions({"exit_cap": (.06, "%")}, deal_id="A", version=3, verified_by="reviewer", supersedes={"exit_cap": "A:exit_cap:v2"})
     assert register.iloc[0]["assumption_id"] == "A:exit_cap:v3"
     assert register.iloc[0]["status"] == "VERIFIED"
+    assert register.iloc[0]["supersedes"] == "A:exit_cap:v2"
     assert len(model_run_fingerprint("v1", register.rename(columns={"assumption_id": "id"}), default_lineage())) == 64
 
 
