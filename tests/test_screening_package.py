@@ -13,7 +13,7 @@ def test_screening_package_contains_executive_sections_and_supporting_files():
     assert "Expected shortfall" in report
     assert "Model-run fingerprint" in report
     assert "review_required" not in report.lower()
-    assert {"stress_cases.csv", "assumptions.csv", "lineage.json", "risk_summary.json", "lease_summary.csv", "lease_monthly_rollup.csv"}.issubset(files)
+    assert {"stress_cases.csv", "monthly_development_model.csv", "assumptions.csv", "lineage.json", "risk_summary.json", "lease_summary.csv", "lease_monthly_rollup.csv"}.issubset(files)
 
 
 def test_screening_package_zip_is_readable():
@@ -21,4 +21,5 @@ def test_screening_package_zip_is_readable():
     with ZipFile(BytesIO(package)) as archive:
         names = set(archive.namelist())
     assert "investment_committee_report.md" in names
+    assert "monthly_development_model.csv" in names
     assert "lease_summary.csv" in names

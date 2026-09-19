@@ -6,34 +6,129 @@ from pathlib import Path
 import json
 import zipfile
 
-import pandas as pd
-
 from src.advanced_underwriting import monte_carlo_underwriting, risk_summary, stress_test
 from src.atlasre import DealInputs, underwrite_deal
-from src.governance import assumption_register, default_lineage, lineage_json, model_run_fingerprint
+from src.committee_analytics import investment_committee_summary
+from src.governance import default_lineage, lineage_json, model_run_fingerprint, versioned_assumptions
 from src.ic_workflow import DealCase, screen_case
 from src.institutional import MonthlyDevelopmentInputs, monthly_development_model
-from src.lease import illustrative_rent_roll, lease_rollup, lease_summary
+from src.lease import LeaseUnderwritingInputs, annual_lease_summary, illustrative_rent_roll, lease_rollup, lease_summary, underwrite_with_lease_roll
 
 
-def build_screening_package(deal: DealInputs, deal_id: str = "ATLAS-001", source_status: str = "REVIEW REQUIRED", simulations: int = 5000) -> dict[str, bytes]:
-    """Return report and supporting files as bytes without hidden filesystem state."""
-    case = DealCase(deal_id, "Illustrative acquisition case", deal, source_status)
-    underwriting = underwrite_deal(deal)
-    simulations_df = monte_carlo_underwriting(deal, simulations=simulations, seed=42)
-    risk = risk_summary(simulations_df)
-    stress = stress_test(deal)
-    monthly, development = monthly_development_model(MonthlyDevelopmentInputs(5_000_000, 12_000_000, 2_500_000))
-    demo_leases = illustrative_rent_roll()
-    lease_monthly = lease_rollup(demo_leases, demo_leases[0].start, 12, operating_expense_ratio=.20)
-    assumptions = assumption_register({"purchase_price": (deal.purchase_price, "USD"), "annual_noi": (deal.annual_noi, "USD / year"), "annual_noi_growth": (deal.annual_noi_growth, "%"), "exit_cap_rate": (deal.exit_cap_rate, "%"), "leverage": (deal.leverage, "%"), "debt_rate": (deal.debt_rate, "%")}, source="Illustrative dashboard input")
-    lineage = default_lineage()
-    fingerprint = model_run_fingerprint("deterministic-core-v1", assumptions, lineage)
+MODEL_VERSION = "deterministic-core-v0.10"
+
+
+def _assumption_values(deal: DealInputs, lease_inputs: LeaseUnderwritingInputs | None) -> dict[str, tuple[object, str]]:
+    values: dict[str, tuple[object, str]] = {
+        "purchase_price": (deal.purchase_price, "USD"),
+        "annual_noi": (deal.annual_noi, "USD / year"),
+        "annual_noi_growth": (deal.annual_noi_growth, "%"),
+        "exit_cap_rate": (deal.exit_cap_rate, "%"),
+        "leverage": (deal.leverage, "%"),
+        "debt_rate": (deal.debt_rate, "%"),
+        "hold_years": (deal.hold_years, "years"),
+    }
+    if lease_inputs is not None:
+        values.update({
+            "lease_rollup_months": (lease_inputs.months, "months"),
+            "lease_operating_expense_ratio": (lease_inputs.operating_expense_ratio, "%"),
+            "lease_count": (len(lease_inputs.leases), "leases"),
+        })
+    return values
+
+
+def _diligence_steps(lease_inputs: LeaseUnderwritingInputs | None) -> str:
+    steps = [
+        "Reconcile the operating statement and all purchase-price inputs to source documents.",
+        "Validate market comparables, exit-cap evidence, and the timing of terminal value.",
+        "Obtain and review the financing term sheet, including covenants, fees, amortization, and maturity.",
+    ]
+    if lease_inputs is not None:
+        steps.insert(0, "Reconcile every rent-roll field, expiry, vacancy, rollover, and credit-quality label to source documents.")
+    steps.extend([
+        "Validate title, legal, tax, engineering, environmental, and insurance diligence.",
+        "Replace illustrative assumptions with versioned, reviewer-verified inputs and regenerate this package.",
+    ])
+    return "\n".join(f"{index}. {step}" for index, step in enumerate(steps, start=1))
+
+
+def build_screening_package(
+    deal: DealInputs,
+    deal_id: str = "ATLAS-001",
+    source_status: str = "REVIEW REQUIRED",
+    simulations: int = 5000,
+    lease_inputs: LeaseUnderwritingInputs | None = None,
+    model_version: str = MODEL_VERSION,
+) -> dict[str, bytes]:
+    """Return report and supporting files as bytes without hidden filesystem state.
+
+    An optional ``lease_inputs`` path derives annual NOI from the rent roll before
+    the existing acquisition engine is run. Without it, the original simplified
+    annual-NOI path is used unchanged.
+    """
+    case_deal = deal
+    lease_files: dict[str, bytes] = {}
+    reference_leases = illustrative_rent_roll()
+    reference_rollup = lease_rollup(reference_leases, reference_leases[0].start, 12, operating_expense_ratio=.20)
+    lease_note = (
+        "No rent-roll input was supplied. The economic case uses the explicit simplified annual-NOI assumption. "
+        "The included lease files are a clearly illustrative reference schedule, not source data."
+    )
+    lease_files = {
+        "lease_summary.csv": lease_summary(reference_leases).to_csv(index=False).encode("utf-8"),
+        "lease_monthly_rollup.csv": reference_rollup.to_csv(index=False).encode("utf-8"),
+        "lease_annual_summary.csv": annual_lease_summary(reference_rollup).to_csv(index=False).encode("utf-8"),
+    }
+    if lease_inputs is not None:
+        lease_result = underwrite_with_lease_roll(deal, lease_inputs)
+        case_deal = lease_result["deal_inputs"]
+        monthly = lease_result["lease_monthly_rollup"]
+        annual = lease_result["lease_annual_summary"]
+        lease_note = (
+            f"The economic case uses an optional rent-roll bridge. The annual NOI supplied to the core engine is "
+            f"${lease_result['lease_derived_annual_noi']:,.0f}, annualized from {lease_inputs.months} monthly periods."
+        )
+        lease_files = {
+            "lease_summary.csv": lease_summary(lease_inputs.leases).to_csv(index=False).encode("utf-8"),
+            "lease_monthly_rollup.csv": monthly.to_csv(index=False).encode("utf-8"),
+            "lease_annual_summary.csv": annual.to_csv(index=False).encode("utf-8"),
+        }
+
+    case = DealCase(deal_id, "Screening case", case_deal, source_status)
     screen = screen_case(case)
+    underwriting = underwrite_deal(case_deal)
+    simulations_df = monte_carlo_underwriting(case_deal, simulations=simulations, seed=42)
+    risk = risk_summary(simulations_df)
+    stress = stress_test(case_deal)
+    monthly_development, development_summary = monthly_development_model(
+        MonthlyDevelopmentInputs(5_000_000, 12_000_000, 2_500_000)
+    )
+    assumptions = versioned_assumptions(
+        _assumption_values(deal, lease_inputs),
+        deal_id=deal_id,
+        version=1,
+        source="Illustrative dashboard input" if source_status == "REVIEW REQUIRED" else "Source-backed screening input",
+    )
+    lineage = default_lineage()
+    if lease_inputs is not None:
+        lineage.append({
+            "output": "annual_noi",
+            "value": "derived",
+            "inputs": ["lease_rollup_months", "lease_operating_expense_ratio", "lease_count"],
+            "method": "sum monthly lease NOI / supplied months x 12",
+            "source_refs": ["lease_summary.csv", "lease_monthly_rollup.csv"],
+            "assumption_version": 1,
+        })
+    fingerprint = model_run_fingerprint(model_version, assumptions, lineage)
+    committee = investment_committee_summary(case_deal)
     flags = "\n".join(f"- **{flag['severity']}** — {flag['flag']}: {flag['evidence']}" for flag in screen["flags"])
+    thesis = (
+        "The case is suitable only for initial, downside-led screening. Its economic outputs remain conditional on "
+        "the supplied operating, valuation, financing, and source-verification assumptions."
+    )
     report = f"""# AtlasRE Investment Committee Screening Package
 
-> **Status:** Screening decision support only. This package is not an approval, valuation opinion, investment recommendation, or production underwriting output.
+> **Status:** This is screening decision support only. It is not an approval, valuation opinion, investment recommendation, or production underwriting output.
 
 ## 1. Executive decision frame
 
@@ -42,27 +137,31 @@ def build_screening_package(deal: DealInputs, deal_id: str = "ATLAS-001", source
 | Deal ID | `{deal_id}` |
 | Source status | **{source_status}** |
 | Decision status | **{screen['status']}** |
-| Model version | `deterministic-core-v1` |
+| Model version | `{model_version}` |
 | Model-run fingerprint | `{fingerprint}` |
 
-The case must not advance to approval while source status is `REVIEW REQUIRED` or while any critical economic flag remains unresolved.
+The case must not advance to approval while source status is `REVIEW REQUIRED` or while a critical economic flag remains unresolved.
 
-## 2. Downside and governance flags
+## 2. Thesis
+
+{thesis}
+
+## 3. Downside and governance flags
 
 {flags}
 
-## 3. Key assumptions
+## 4. Key assumptions
 
 | Assumption | Value | Status |
 | --- | ---: | --- |
-| Purchase price | ${deal.purchase_price:,.0f} | REVIEW REQUIRED |
-| Annual NOI | ${deal.annual_noi:,.0f} | REVIEW REQUIRED |
-| NOI growth | {deal.annual_noi_growth:.2%} | REVIEW REQUIRED |
-| Exit cap rate | {deal.exit_cap_rate:.2%} | REVIEW REQUIRED |
-| Leverage | {deal.leverage:.2%} | REVIEW REQUIRED |
-| Debt rate | {deal.debt_rate:.2%} | REVIEW REQUIRED |
+| Purchase price | ${deal.purchase_price:,.0f} | {source_status} |
+| Annual NOI used in core model | ${case_deal.annual_noi:,.0f} | {source_status} |
+| NOI growth | {case_deal.annual_noi_growth:.2%} | {source_status} |
+| Exit cap rate | {case_deal.exit_cap_rate:.2%} | {source_status} |
+| Leverage | {case_deal.leverage:.2%} | {source_status} |
+| Debt rate | {case_deal.debt_rate:.2%} | {source_status} |
 
-## 4. Economic results
+## 5. Economic results
 
 | Metric | Result |
 | --- | ---: |
@@ -73,8 +172,9 @@ The case must not advance to approval while source status is `REVIEW REQUIRED` o
 | Minimum DSCR | {underwriting['minimum_dscr']:.2f}x |
 | Unlevered NPV | ${underwriting['unlevered_npv']:,.0f} |
 | Remaining debt at exit | ${underwriting['remaining_debt_at_exit']:,.0f} |
+| Break-even exit cap at 12% hurdle | {committee['break_even_exit_cap']:.2%} |
 
-## 5. Risk tails and covenant review
+## 6. Risk tails and covenant review
 
 | Risk metric | Result |
 | --- | ---: |
@@ -87,49 +187,55 @@ The case must not advance to approval while source status is `REVIEW REQUIRED` o
 | Probability negative NPV | {risk['probability_negative_npv']:.2%} |
 | Probability DSCR below 1.25x | {risk['probability_dscr_below_125']:.2%} |
 
-## 6. Recommended next diligence steps
+## 7. Lease-level evidence
 
-1. Reconcile the rent roll and operating statement to source documents.
-2. Validate market comparables, exit-cap evidence, and the timing of the terminal value.
-3. Obtain and review the financing term sheet, including covenants, fees, amortization, and maturity.
-4. Validate title, legal, tax, engineering, environmental, and insurance diligence.
-5. Replace illustrative assumptions with versioned, reviewer-verified inputs and regenerate this package.
+{lease_note}
 
-## 7. Traceability
+## 8. Reference schedules
 
-Lineage is included in `lineage.json`. The assumption snapshot is included in `assumptions.csv`. The fingerprint above hashes the model version, assumption snapshot, and lineage records.
+The package includes an illustrative monthly development schedule for reference. It shows draw timing, capitalized interest, stabilization NOI, debt repayment, and exit proceeds. The schedule is not a project-specific budget, draw request, or construction contract review.
 
-## 8. Lease-level reference case
+## 9. Recommended next diligence steps
 
-The package includes a clearly illustrative lease summary and monthly rent-roll roll-up. These files demonstrate the optional lease path; they are not verified tenant data and do not replace a complete rent-roll, TI/LC, downtime, recovery, capex, or credit review.
+{_diligence_steps(lease_inputs)}
 
-## 9. Development reference case
+## 10. Model fingerprint and traceability
 
-The package includes a separate monthly development reference schedule in `monthly_development_model.csv`. It is not a substitute for a project-specific budget, draw schedule, or construction contract review.
+`{fingerprint}`
+
+The fingerprint hashes the model version, assumption snapshot, and lineage records. The package includes `assumptions.csv`, `lineage.json`, `risk_summary.json`, and `stress_cases.csv`. It is a reproducibility handle, not a persistent approval ledger.
 """
     files: dict[str, bytes] = {
         "investment_committee_report.md": report.encode("utf-8"),
         "stress_cases.csv": stress.to_csv(index=False).encode("utf-8"),
-        "monthly_development_model.csv": monthly.to_csv(index=False).encode("utf-8"),
+        "monthly_development_model.csv": monthly_development.to_csv(index=False).encode("utf-8"),
         "assumptions.csv": assumptions.to_csv(index=False).encode("utf-8"),
         "lineage.json": lineage_json(lineage).encode("utf-8"),
         "risk_summary.json": json.dumps(risk, indent=2).encode("utf-8"),
-        "lease_summary.csv": lease_summary(demo_leases).to_csv(index=False).encode("utf-8"),
-        "lease_monthly_rollup.csv": lease_monthly.to_csv(index=False).encode("utf-8"),
     }
+    files.update(lease_files)
     return files
 
 
-def screening_package_zip(deal: DealInputs, deal_id: str = "ATLAS-001", source_status: str = "REVIEW REQUIRED", simulations: int = 5000) -> bytes:
-    files = build_screening_package(deal, deal_id, source_status, simulations)
+def screening_package_zip(
+    deal: DealInputs,
+    deal_id: str = "ATLAS-001",
+    source_status: str = "REVIEW REQUIRED",
+    simulations: int = 5000,
+    lease_inputs: LeaseUnderwritingInputs | None = None,
+    model_version: str = MODEL_VERSION,
+) -> bytes:
+    """Return the complete screening package as a downloadable ZIP file."""
+    files = build_screening_package(deal, deal_id, source_status, simulations, lease_inputs, model_version)
     buffer = BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
-        for name, content in files.items():
-            archive.writestr(name, content)
+        for name in sorted(files):
+            archive.writestr(name, files[name])
     return buffer.getvalue()
 
 
 def write_screening_package(out: Path = Path("artifacts"), deal: DealInputs | None = None) -> Path:
+    """Write a default, clearly illustrative package for local inspection."""
     out.mkdir(exist_ok=True)
     files = build_screening_package(deal or DealInputs(10_000_000, 650_000, hold_years=5, leverage=0.5))
     for name, content in files.items():
