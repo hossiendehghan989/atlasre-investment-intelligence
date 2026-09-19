@@ -12,6 +12,7 @@ from src.governance import default_lineage, lineage_json, model_run_fingerprint,
 from src.ic_workflow import DealCase, compare_deals, generate_ic_memo, screen_case
 from src.lease import LeaseUnderwritingInputs, illustrative_rent_roll, lease_summary, underwrite_with_lease_roll
 from src.portfolio import portfolio_allocation, portfolio_risk_view, portfolio_snapshot
+from src.presentation import fraction_from_percent
 
 st.set_page_config(page_title="AtlasRE | Deal Review", layout="wide", initial_sidebar_state="expanded")
 
@@ -61,10 +62,10 @@ with st.sidebar:
     price = st.number_input("Purchase price ($)", min_value=100_000, value=10_000_000, step=250_000)
     noi = st.number_input("Annual NOI ($)", min_value=10_000, value=650_000, step=25_000)
     hold = st.slider("Hold period", 1, 15, 5)
-    growth = st.slider("NOI growth", -0.05, 0.12, 0.03, 0.005, format="%.1f%%")
-    exit_cap = st.slider("Exit cap rate", 0.03, 0.15, 0.06, 0.005, format="%.1f%%")
-    leverage = st.slider("Leverage", 0.0, 0.80, 0.50, 0.05, format="%.0f%%")
-    hurdle = st.slider("Return hurdle", 0.06, 0.20, 0.12, 0.01, format="%.0f%%")
+    growth = fraction_from_percent(st.slider("NOI growth", -5.0, 12.0, 3.0, 0.5, format="%.1f%%"))
+    exit_cap = fraction_from_percent(st.slider("Exit cap rate", 3.0, 15.0, 6.0, 0.5, format="%.1f%%"))
+    leverage = fraction_from_percent(st.slider("Leverage", 0.0, 80.0, 50.0, 5.0, format="%.0f%%"))
+    hurdle = fraction_from_percent(st.slider("Return hurdle", 6.0, 20.0, 12.0, 1.0, format="%.0f%%"))
     st.markdown("<div class='section-rule'></div>", unsafe_allow_html=True)
     st.caption("Change the assumptions to test the case. Confirm figures before circulation.")
 
