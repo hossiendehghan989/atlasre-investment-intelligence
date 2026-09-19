@@ -67,3 +67,16 @@ The local-only test changes are one new test module, `tests/test_elevation_harde
 The `review-fixes` branch was created from the **current local state** at `bf8f051`, not from remote `origin/main`, and currently contains the audit commit `75226cb`. The remote 37-test baseline is preserved as a reference point; the local 45-test suite and local lease/governance/dashboard work must not be discarded.
 
 No implementation changes were made before this audit file. The next step is to implement the requested fixes in small, separate commits.
+
+## Status after review-fixes implementation
+
+| Issue | Status | Evidence |
+| --- | --- | --- |
+| Portfolio unallocated capital repeated per row | Fixed | Explicit `UNALLOCATED` summary row and allocation reconciliation tests |
+| Verified source without evidence printed as verified | Fixed | Package propagates reviewer and source reference; tests cover both evidence states |
+| Development project IRR definition mismatch | Fixed | Project IRR is now unlevered; independent `numpy-financial` regression test added |
+| NaN, infinity, negative-rate, and fractional-counter validation | Fixed for reviewed public inputs | Shared validation helpers and parametrized boundary tests added |
+| Dashboard/package path dependence | Fixed | Paths resolve from `__file__` and the dashboard uses the repository root |
+| Reproducible dependency installation | Fixed | `requires-python`, bounded requirements, lock file, and CI lock installation added |
+| Live market ingestion, authentication/RBAC, immutable approvals | Open / not applicable to this prototype | Explicitly documented as production limitations |
+| Screenshot regeneration | Open until final dashboard capture | Existing committed screenshots require final visual verification after the last code changes |

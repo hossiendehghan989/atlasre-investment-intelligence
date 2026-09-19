@@ -1,5 +1,15 @@
 # Changelog
 
+## review-fixes — post-review hardening
+
+- Added an explicit `UNALLOCATED` portfolio summary row and reconciliation coverage.
+- Propagated source evidence through screening packages so unsupported `VERIFIED` inputs render as `REVIEW REQUIRED`.
+- Corrected development `project_irr` to use unlevered project cash flows and added an independent IRR check.
+- Added shared finite, range, and integer validation coverage for reviewed public inputs.
+- Made dashboard and report paths independent of the current working directory.
+- Added Python version metadata, bounded dependency ranges, a lock file, CI lock installation, and security/data guidance.
+- Added a Streamlit deployment placeholder and updated test-count and limitation disclosures.
+
 ## review-fixes — correctness, testing, and repository controls
 
 This branch contains the local work already present before the review, followed by the review fixes listed below. The branch is based on the local `review-fixes` state and targets the remote `main` branch.

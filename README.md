@@ -22,6 +22,8 @@ python generate_committee_report.py
 
 All bundled inputs are illustrative unless a caller supplies and verifies source-backed data. The default screening case is intentionally marked `REVIEW REQUIRED`.
 
+**Live demo:** `[add deployment URL here]`
+
 ## Screenshots
 
 The screenshots below were captured from the local Streamlit application with the default illustrative inputs.
@@ -71,15 +73,15 @@ The core acquisition model treats the supplied annual NOI as year-one NOI; growt
 
 See [docs/case_study.md](docs/case_study.md) for one worked **ILLUSTRATIVE** case, including assumptions, outputs, screening flags, and independent numerical checks. It is not a real transaction.
 
-## Limitations
+## Known limitations
 
-AtlasRE does not ingest live market data or source documents. It does not provide OCR, accounting, tax, FX, complete commercial lease economics, construction-to-permanent debt, mezzanine or preferred-equity stacks, refinance modeling, persistent approvals, production identity and access controls, or a multi-period fund optimizer. The simulation is seeded and reproducible but is not calibrated to observed market outcomes.
+AtlasRE is a single-user local tool with no authentication or RBAC, no immutable audit store, and illustrative data only. It is not independently validated by a finance professional. It does not ingest live market data or source documents. It does not provide OCR, accounting, tax, FX, complete commercial lease economics, construction-to-permanent debt, mezzanine or preferred-equity stacks, refinance modeling, persistent approvals, production identity and access controls, or a multi-period fund optimizer. The simulation is seeded and reproducible but is not calibrated to observed market outcomes.
 
 A deployment would require source-controlled ingestion, document and calculation reconciliation, independent model validation, persistent governance, formal authorization, monitoring, and firm-specific policies. No output should be circulated as an investment recommendation without those controls.
 
 ## Testing
 
-The local branch currently passes **51 tests**. The suite covers acquisition math, debt, development, waterfalls, leases, governance, portfolio behavior, adversarial inputs, the market-risk correction, year-one NOI timing, equity contributions, and independent IRR/NPV/debt cross-checks. CI runs `pytest -q` and `ruff check .` on pushes and pull requests.
+The local branch currently passes **98 tests**. The suite covers acquisition math, debt, development, waterfalls, leases, governance, portfolio behavior, adversarial inputs, source evidence, validation boundaries, year-one NOI timing, equity contributions, and independent IRR/NPV/debt cross-checks. CI installs the lock file and runs `pytest -q` and `ruff check .` on pushes and pull requests.
 
 ## License
 
