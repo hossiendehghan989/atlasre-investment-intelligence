@@ -54,7 +54,8 @@ def portfolio_allocation(deals: pd.DataFrame, available_equity: float, max_singl
     output["eligible"] = output["capital_eligible"] & output["dscr_eligible"]
     output["recommended_allocation"] = allocate_capital(output, available_equity, max_single_asset_pct, min_dscr)
     allocated = float(output["recommended_allocation"].sum())
-    output["unallocated_equity"] = float(available_equity - allocated)
+    unallocated = float(available_equity - allocated)
+    output["unallocated_equity"] = 0.0
     output["allocation_weight"] = output["recommended_allocation"] / allocated if allocated else 0.0
     output["constraint_flag"] = output.apply(lambda row: "Pass" if row["eligible"] and row["recommended_allocation"] > 0 else "Review", axis=1)
     output["constraint_reason"] = output.apply(
@@ -73,6 +74,25 @@ def portfolio_allocation(deals: pd.DataFrame, available_equity: float, max_singl
         ),
         axis=1,
     )
+    if unallocated > 1e-9:
+        output = pd.concat([
+            output,
+            pd.DataFrame([{
+                "asset": "UNALLOCATED",
+                "equity_required": float("nan"),
+                "risk_adjusted_score": float("nan"),
+                "levered_irr": float("nan"),
+                "minimum_dscr": float("nan"),
+                "capital_eligible": False,
+                "dscr_eligible": False,
+                "eligible": False,
+                "recommended_allocation": 0.0,
+                "unallocated_equity": unallocated,
+                "allocation_weight": 0.0,
+                "constraint_flag": "SUMMARY",
+                "constraint_reason": "Available capital not allocated",
+            }], index=["UNALLOCATED"]),
+        ], ignore_index=False)
     return output
 
 

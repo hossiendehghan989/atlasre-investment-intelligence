@@ -62,6 +62,8 @@ def build_screening_package(
     deal: DealInputs,
     deal_id: str = "ATLAS-001",
     source_status: str = "REVIEW REQUIRED",
+    verified_by: str | None = None,
+    source_reference: str | None = None,
     simulations: int = 5000,
     lease_inputs: LeaseUnderwritingInputs | None = None,
     model_version: str = MODEL_VERSION,
@@ -100,8 +102,14 @@ def build_screening_package(
             "lease_annual_summary.csv": annual.to_csv(index=False).encode("utf-8"),
         }
 
-    case = DealCase(deal_id, "Screening case", case_deal, source_status)
+    case = DealCase(deal_id, "Screening case", case_deal, source_status, verified_by, source_reference)
     screen = screen_case(case)
+    effective_source_status = screen["source_status"]
+    source_gate_note = (
+        "The case must not advance to approval while source status is `REVIEW REQUIRED` or while a critical economic flag remains unresolved."
+        if effective_source_status != "VERIFIED"
+        else "The case remains subject to unresolved critical economic flags and independent committee review."
+    )
     underwriting = underwrite_deal(case_deal)
     simulations_df = monte_carlo_underwriting(case_deal, simulations=simulations, seed=42)
     risk = risk_summary(simulations_df)
@@ -113,7 +121,8 @@ def build_screening_package(
         _assumption_values(deal, lease_inputs),
         deal_id=deal_id,
         version=1,
-        source="Illustrative dashboard input" if source_status == "REVIEW REQUIRED" else "Source-backed screening input",
+        source="Source-backed screening input" if effective_source_status == "VERIFIED" else "Illustrative dashboard input",
+        verified_by=verified_by if effective_source_status == "VERIFIED" else "",
     )
     lineage = default_lineage()
     if lease_inputs is not None:
@@ -141,12 +150,12 @@ def build_screening_package(
 | Control | Result |
 | --- | --- |
 | Deal ID | `{deal_id}` |
-| Source status | **{source_status}** |
+| Source status | **{effective_source_status}** |
 | Decision status | **{screen['status']}** |
 | Model version | `{model_version}` |
 | Model-run fingerprint | `{fingerprint}` |
 
-The case must not advance to approval while source status is `REVIEW REQUIRED` or while a critical economic flag remains unresolved.
+{source_gate_note}
 
 ## 2. Thesis
 
@@ -160,12 +169,12 @@ The case must not advance to approval while source status is `REVIEW REQUIRED` o
 
 | Assumption | Value | Status |
 | --- | ---: | --- |
-| Purchase price | ${deal.purchase_price:,.0f} | {source_status} |
-| Annual NOI used in core model | ${case_deal.annual_noi:,.0f} | {source_status} |
-| NOI growth | {case_deal.annual_noi_growth:.2%} | {source_status} |
-| Exit cap rate | {case_deal.exit_cap_rate:.2%} | {source_status} |
-| Leverage | {case_deal.leverage:.2%} | {source_status} |
-| Debt rate | {case_deal.debt_rate:.2%} | {source_status} |
+            | Purchase price | ${deal.purchase_price:,.0f} | {effective_source_status} |
+            | Annual NOI used in core model | ${case_deal.annual_noi:,.0f} | {effective_source_status} |
+            | NOI growth | {case_deal.annual_noi_growth:.2%} | {effective_source_status} |
+            | Exit cap rate | {case_deal.exit_cap_rate:.2%} | {effective_source_status} |
+            | Leverage | {case_deal.leverage:.2%} | {effective_source_status} |
+            | Debt rate | {case_deal.debt_rate:.2%} | {effective_source_status} |
 
 ## 5. Economic results
 
@@ -227,12 +236,14 @@ def screening_package_zip(
     deal: DealInputs,
     deal_id: str = "ATLAS-001",
     source_status: str = "REVIEW REQUIRED",
+    verified_by: str | None = None,
+    source_reference: str | None = None,
     simulations: int = 5000,
     lease_inputs: LeaseUnderwritingInputs | None = None,
     model_version: str = MODEL_VERSION,
 ) -> bytes:
     """Return the complete screening package as a downloadable ZIP file."""
-    files = build_screening_package(deal, deal_id, source_status, simulations, lease_inputs, model_version)
+    files = build_screening_package(deal, deal_id, source_status, verified_by, source_reference, simulations, lease_inputs, model_version)
     buffer = BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
         for name in sorted(files):

@@ -33,6 +33,18 @@ def test_monthly_development_output_has_peak_debt_and_annualized_irr():
     assert -1 < summary["project_irr"] < 2
 
 
+def test_development_project_irr_is_unlevered_and_matches_independent_check():
+    import numpy_financial as npf
+
+    _, summary = monthly_development_model(MonthlyDevelopmentInputs(5_000_000, 12_000_000, 2_500_000))
+    expected_project = (1 + npf.irr(summary["project_cash_flows"])) ** 12 - 1
+    expected_equity = (1 + npf.irr(summary["equity_cash_flows"])) ** 12 - 1
+    assert summary["project_irr"] == pytest.approx(expected_project)
+    assert summary["equity_irr_pre_waterfall"] == pytest.approx(expected_equity)
+    assert summary["project_irr"] > 0
+    assert summary["project_irr"] != pytest.approx(summary["equity_irr_pre_waterfall"])
+
+
 def test_correlated_monte_carlo_is_reproducible_and_exposes_risk_tails():
     deal = DealInputs(10_000_000, 650_000, leverage=0.5)
     first = monte_carlo_underwriting(deal, simulations=250, seed=99)

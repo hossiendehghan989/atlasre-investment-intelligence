@@ -22,3 +22,31 @@ def test_screening_package_zip_is_readable():
     assert "investment_committee_report.md" in names
     assert "monthly_development_model.csv" in names
     assert "lease_summary.csv" in names
+
+
+def test_verified_without_evidence_is_review_required_throughout_package():
+    files = build_screening_package(
+        DealInputs(10_000_000, 650_000, leverage=.5),
+        source_status="VERIFIED",
+        simulations=25,
+    )
+    report = files["investment_committee_report.md"].decode()
+    assumptions = files["assumptions.csv"].decode()
+    assert "| Source status | **REVIEW REQUIRED** |" in report
+    assert "Source-backed screening input" not in assumptions
+    assert "REVIEW REQUIRED" in assumptions
+
+
+def test_verified_with_evidence_is_verified_throughout_package():
+    files = build_screening_package(
+        DealInputs(10_000_000, 650_000, leverage=.5),
+        source_status="VERIFIED",
+        verified_by="Reviewer A",
+        source_reference="data-room://deal-001/operating-statement.pdf",
+        simulations=25,
+    )
+    report = files["investment_committee_report.md"].decode()
+    assumptions = files["assumptions.csv"].decode()
+    assert "| Source status | **VERIFIED** |" in report
+    assert "Source-backed screening input" in assumptions
+    assert "VERIFIED" in assumptions

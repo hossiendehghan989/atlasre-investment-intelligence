@@ -108,7 +108,10 @@ def monthly_development_model(p: MonthlyDevelopmentInputs) -> tuple[pd.DataFrame
         "debt_repayment": debt_repayment,
     })
     equity_flow = -(df["total_draw"] - df["debt_draw"] + df["lender_fee"]) + df["noi"] + df["sale_proceeds"] - df["debt_repayment"]
-    project_flow = -df["total_draw"] + df["noi"] + df["sale_proceeds"] - df["interest"] - df["debt_repayment"]
+    # Project IRR is unlevered: financing cash flows (draws, interest, and
+    # repayment) are excluded. Equity IRR below is levered and includes the
+    # actual equity contributions and debt repayment.
+    project_flow = -df["total_draw"] + df["noi"] + df["sale_proceeds"]
     total_equity = float((df["total_draw"] - df["debt_draw"] + df["lender_fee"]).sum())
     return df, {
         "total_cost": float(total_cost),
@@ -121,6 +124,7 @@ def monthly_development_model(p: MonthlyDevelopmentInputs) -> tuple[pd.DataFrame
         "exit_value": float(exit_value),
         "project_irr": _annualize_monthly_irr(_irr(project_flow)),
         "equity_irr_pre_waterfall": _annualize_monthly_irr(_irr(equity_flow)),
+        "project_cash_flows": project_flow.tolist(),
         "equity_cash_flows": equity_flow.tolist(),
     }
 
