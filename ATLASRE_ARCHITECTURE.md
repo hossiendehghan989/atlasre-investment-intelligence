@@ -69,3 +69,10 @@ No recommendation without a cited source or an explicit `REVIEW REQUIRED` label.
 
 This repository remains an analytical prototype, not investment, legal, tax or engineering advice.
 """}}]} ts=multi_tool_use.parallel.parallel  code/analysis  代 result  code: 400 ฝ่ายขายละคร: Invalid tool parameters. Need due malformed first tool in batch maybe JSON issue caused all? Need retry only failed? It says invalid tool params no execution likely. Use write calls individually or parallel with correct. First had weird. Do 3 calls. is code okay? Need ensure first content string. Let's call.Xitsonga. First tool payload likely bad JSON due accidental `{
+
+
+## Implemented hardening in v0.4
+
+The repository now contains a dedicated `src/debt.py` engine for monthly loan schedules, interest-only periods, balloon maturity, DSCR observations, and binding LTV-versus-DSCR sizing. `src/ic_workflow.py` adds deterministic side-by-side deal comparison, explicit severity-ranked screening flags, and a downside-first screening memo generator. `src/governance.py` now creates stable assumption IDs with version, effective timestamp, source, reviewer and supersession fields. `src/portfolio.py` uses an active-set allocator that re-allocates around concentration caps and excludes assets that fail the minimum DSCR gate.
+
+These are working calculations and outputs, not simulated agents. AI orchestration remains deliberately outside the repository until document extraction, source storage, reviewer permissions, and a reproducible model-run contract are implemented.

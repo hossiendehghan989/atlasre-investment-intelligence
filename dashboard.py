@@ -6,7 +6,9 @@ import streamlit as st
 from src.advanced_underwriting import DevelopmentInputs, monte_carlo_underwriting, risk_summary, stress_test
 from src.atlasre import DealInputs, rank_markets, scenario_matrix, underwrite_deal
 from src.committee_analytics import investment_committee_summary, sensitivity_table
+from src.debt import DebtTerms, monthly_debt_schedule, size_debt_from_constraints
 from src.governance import assumption_register, default_lineage, ic_workflow, lineage_json
+from src.ic_workflow import DealCase, compare_deals, generate_ic_memo
 from src.institutional import MonthlyDevelopmentInputs, monthly_development_model, size_debt
 from src.portfolio import portfolio_allocation, portfolio_snapshot
 
@@ -90,6 +92,12 @@ with development_tab:
     st.caption(f"Capitalized interest: ${monthly_summary['capitalized_interest']:,.0f} · Project IRR before waterfall: {monthly_summary['project_irr']:.1%}")
     debt_sizing = size_debt(noi, underwriting["entry_cap_rate"], 0.60, 1.25, 0.07, 25, price)
     st.write(f"Debt sizing: ${debt_sizing['recommended_loan']:,.0f} recommended, constrained by the lower of LTV (${debt_sizing['ltv_limit']:,.0f}) and DSCR (${debt_sizing['dscr_limit']:,.0f}).")
+    terms = DebtTerms(annual_rate=0.07, amortization_years=25, term_months=hold * 12, interest_only_months=12)
+    monthly_noi = [noi * (1 + growth) ** (month // 12) for month in range(terms.term_months)]
+    constrained = size_debt_from_constraints(monthly_noi, price, 0.60, 1.25, terms)
+    schedule = monthly_debt_schedule(constrained["recommended_loan"], terms, noi=monthly_noi)
+    st.caption(f"Institutional sizing binding constraint: {constrained['binding_constraint']} · Recommended loan: ${constrained['recommended_loan']:,.0f}")
+    st.dataframe(schedule.tail(12).style.format({"beginning_balance": "${:,.0f}", "interest": "${:,.0f}", "scheduled_payment": "${:,.0f}", "principal_paid": "${:,.0f}", "ending_balance": "${:,.0f}", "balloon_payoff": "${:,.0f}", "dscr": "{:.2f}x"}), use_container_width=True, hide_index=True)
 
 with portfolio_tab:
     st.subheader("Portfolio impact")
@@ -119,6 +127,11 @@ with governance_tab:
     st.markdown("**Output lineage**")
     st.json(default_lineage())
     st.download_button("Download lineage JSON", lineage_json(default_lineage()), file_name="atlasre-lineage.json", mime="application/json")
+    current_case = DealCase("ATLAS-001", "Core-plus screening case", base_deal)
+    comparison_case = DealCase("ATLAS-002", "Higher-growth challenge case", DealInputs(price * 1.05, noi * 1.08, hold, growth + 0.01, exit_cap - 0.005, hurdle - 0.02, 0.03, 0.02, leverage))
+    st.markdown("**Side-by-side deal comparison**")
+    st.dataframe(compare_deals([current_case, comparison_case], hurdle).style.format({"entry_cap": "{:.2%}", "levered_irr": "{:.2%}", "unlevered_irr": "{:.2%}", "equity_multiple": "{:.2f}x", "minimum_dscr": "{:.2f}x", "unlevered_npv": "${:,.0f}"}), use_container_width=True, hide_index=True)
+    st.download_button("Download screening memo", generate_ic_memo(current_case, hurdle), file_name="atlasre-screening-memo.md", mime="text/markdown")
     st.caption("Every default is marked REVIEW REQUIRED until a source citation and reviewer are attached.")
 
 with markets_tab:

@@ -137,3 +137,10 @@ It produces a Markdown investment-committee review, stress-case CSV, and monthly
 The repository now includes a governance and portfolio layer designed around the original brief. The Streamlit decision surface adds an IC workflow, version-ready assumption register, output lineage download, downside-first risk review, and portfolio allocation with concentration and DSCR flags. `src/governance.py` provides source/status labeling, machine-readable lineage records, and a tamper-evident hash-chain audit primitive. `src/portfolio.py` provides explicit capital-allocation constraints and portfolio snapshot metrics.
 
 The target operating model, high-level schema, agent boundaries, recommended stack, controls, and 8–12 week roadmap are documented in [`ATLASRE_ARCHITECTURE.md`](ATLASRE_ARCHITECTURE.md). This is intentionally an evolution of the existing Python/Streamlit core rather than a replacement: deterministic financial calculations remain the source of truth while future AI agents are constrained to cited, reviewable outputs.
+
+
+## Institutional hardening (v0.4)
+
+The latest increment adds a dedicated monthly debt engine with interest-only periods, balloon maturity, monthly DSCR observations, and binding LTV/DSCR sizing; a deterministic IC workflow with side-by-side deal comparison, severity-ranked flags, and downloadable downside-first screening memos; stable versioned assumption IDs; and an active-set portfolio allocator that re-allocates around concentration caps while excluding assets below the minimum DSCR gate. The regression suite now contains 18 tests covering these behaviors.
+
+The system still does not claim live data ingestion, OCR, semantic search, AI agents, or persistent role-based approvals. Those are explicit remaining gaps, not mocked features.
