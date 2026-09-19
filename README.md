@@ -94,3 +94,19 @@ This is a research and portfolio prototype. The default market data is illustrat
 ## License
 
 MIT License.
+
+## Advanced underwriting layer
+
+The project now includes a second underwriting layer for development and risk review. The development module models land, hard costs, soft costs, contingency, construction debt, capitalized interest, stabilized NOI, exit value, preferred return, and sponsor promote. This is closer to the questions asked during development screening than a simple buy-and-hold calculator.
+
+The risk module runs reproducible Monte Carlo simulations over NOI growth, exit cap rate, and purchase price. It reports median, P10, and P90 levered IRR, the probability that IRR falls below a hurdle rate, and the probability of negative NPV. A named stress-test table also covers no growth, exit-cap expansion, cost inflation, and a combined downside case.
+
+The dashboard presents these outputs in separate Underwriting, Risk & Scenarios, Development, and Markets tabs. The purpose is to make downside visible before a committee discusses upside.
+
+## Investment discipline
+
+The project does not present an attractive base case as a conclusion. It presents the assumptions that create the base case, shows how results change when those assumptions move, and separates operating performance from leverage. In a real workflow, verified rent rolls, operating statements, construction budgets, debt terms, title and legal diligence, tax treatment, market comparables, and FX assumptions would replace the illustrative inputs.
+
+## Executive note
+
+[`INVESTMENT_COMMITTEE_MEMO.md`](INVESTMENT_COMMITTEE_MEMO.md) explains the business purpose and how the prototype could be extended inside a real investment organization. It is deliberately written as a concise investment-committee brief rather than a technical showcase.
