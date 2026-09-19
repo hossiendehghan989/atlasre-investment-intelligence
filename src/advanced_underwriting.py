@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import isfinite
 
 import numpy as np
 import pandas as pd
@@ -27,12 +28,32 @@ class DevelopmentInputs:
 
 def development_feasibility(project: DevelopmentInputs) -> dict[str, float | list[float]]:
     """Build a transparent annual development screen and simple promote output."""
+    numeric_fields = (
+        "land_cost",
+        "hard_cost",
+        "soft_cost",
+        "contingency_pct",
+        "construction_years",
+        "stabilization_years",
+        "stabilized_noi",
+        "exit_cap_rate",
+        "debt_to_cost",
+        "construction_rate",
+        "preferred_return",
+        "promote",
+    )
+    if any(not isfinite(float(getattr(project, name))) for name in numeric_fields):
+        raise ValueError("development inputs must be finite")
     if min(project.land_cost, project.hard_cost, project.soft_cost, project.stabilized_noi) <= 0:
         raise ValueError("project costs and stabilized NOI must be positive")
+    if not isinstance(project.construction_years, int) or not isinstance(project.stabilization_years, int):
+        raise ValueError("development timing must be integer years")
     if project.construction_years <= 0 or project.stabilization_years < 0 or project.exit_cap_rate <= 0:
         raise ValueError("development timing and exit cap must be valid")
-    if not 0 <= project.debt_to_cost < 1 or not 0 <= project.promote < 1:
-        raise ValueError("debt_to_cost and promote must be between 0 and 1")
+    if not 0 <= project.contingency_pct <= 1 or not 0 <= project.debt_to_cost < 1 or not 0 <= project.promote < 1:
+        raise ValueError("contingency, debt_to_cost, and promote must be within range")
+    if not 0 <= project.construction_rate <= 1 or not 0 <= project.preferred_return <= 1:
+        raise ValueError("construction rate and preferred return must be within range")
     base_cost = project.land_cost + project.hard_cost + project.soft_cost
     contingency = (project.hard_cost + project.soft_cost) * project.contingency_pct
     total_cost = base_cost + contingency

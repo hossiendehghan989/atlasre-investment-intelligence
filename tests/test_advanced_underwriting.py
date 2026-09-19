@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from src.advanced_underwriting import (
     DevelopmentInputs,
@@ -15,6 +16,25 @@ def test_development_waterfall_balances_capital():
     assert result["total_development_cost"] > 0
     assert result["equity_required"] + result["debt_amount"] == result["total_development_cost"]
     assert result["investor_equity_multiple"] > 0
+
+
+@pytest.mark.parametrize("field", ["land_cost", "hard_cost", "soft_cost", "stabilized_noi"])
+@pytest.mark.parametrize("value", [np.nan, np.inf, -np.inf])
+def test_development_feasibility_rejects_non_finite_cost_inputs(field, value):
+    inputs = DevelopmentInputs(5_000_000, 12_000_000, 2_500_000, stabilized_noi=1_800_000)
+    invalid = {**inputs.__dict__, field: value}
+
+    with pytest.raises(ValueError, match="finite"):
+        development_feasibility(DevelopmentInputs(**invalid))
+
+
+@pytest.mark.parametrize("field", ["contingency_pct", "debt_to_cost", "construction_rate", "preferred_return", "promote"])
+def test_development_feasibility_rejects_negative_percentages(field):
+    inputs = DevelopmentInputs(5_000_000, 12_000_000, 2_500_000, stabilized_noi=1_800_000)
+    invalid = {**inputs.__dict__, field: -0.01}
+
+    with pytest.raises(ValueError):
+        development_feasibility(DevelopmentInputs(**invalid))
 
 
 def test_monte_carlo_is_reproducible_and_has_downside_metrics():
