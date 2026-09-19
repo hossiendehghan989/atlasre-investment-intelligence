@@ -91,6 +91,15 @@ assumptions = versioned_assumptions(
 )
 fingerprint = model_run_fingerprint(MODEL_VERSION, assumptions, default_lineage())
 
+if any(flag["severity"] == "CRITICAL" for flag in screen["flags"]):
+    review_focus = "Primary review point: resolve the critical economic issue before spending time on upside scenarios."
+elif current_case.source_status != "VERIFIED":
+    review_focus = "Primary review point: confirm the operating statement, rent roll, and debt terms before relying on the return figures."
+elif underwriting["minimum_dscr"] < 1.25:
+    review_focus = "Primary review point: the debt service cushion is thin; test the case against a weaker NOI path and higher rates."
+else:
+    review_focus = "Primary review point: challenge terminal value, exit-cap evidence, and the assumptions that drive the operating-income path."
+
 st.markdown("<div class='case-kicker'>Preliminary deal review</div>", unsafe_allow_html=True)
 header_left, header_right = st.columns([3, 1])
 with header_left:
@@ -139,6 +148,7 @@ with tab_screen:
     with left:
         st.markdown("### Review note")
         st.write("The case remains at preliminary screening. The current return profile is conditional on the operating assumptions, terminal value, financing terms, and source package. Resolve the governance flag before treating the economic outputs as decision-ready.")
+        st.info(review_focus)
         st.markdown("### Next diligence")
         st.write("Reconcile the rent roll and operating statement. Validate the exit-cap evidence and terminal-value timing. Obtain the financing term sheet and review covenants, fees, amortization, and maturity.")
     with right:
