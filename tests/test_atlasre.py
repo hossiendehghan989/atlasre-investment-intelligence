@@ -12,6 +12,17 @@ def test_underwriting_has_consistent_cash_flow_outputs():
     assert result["equity_multiple"] > 1
 
 
+def test_debt_service_stops_after_loan_is_fully_amortized():
+    deal = DealInputs(10_000_000, 650_000, hold_years=25, leverage=0.5, debt_amortization_years=10)
+    result = underwrite_deal(deal)
+
+    assert result["debt_service_schedule"][9] > 0
+    assert result["debt_service_schedule"][10:] == pytest.approx([0.0] * 15)
+    assert result["cash_flows"][11] == pytest.approx(
+        deal.annual_noi * (1 + deal.annual_noi_growth) ** 10
+    )
+
+
 def test_year_one_noi_is_the_input_noi_before_growth():
     deal = DealInputs(10_000_000, 650_000, hold_years=3, annual_noi_growth=0.10)
     result = underwrite_deal(deal)

@@ -96,6 +96,7 @@ def underwrite_deal(deal: DealInputs) -> dict[str, float | list[float]]:
     unlevered_irr = _irr(unlevered_flows)
     discount_flows = _npv(deal.discount_rate, np.asarray(unlevered_flows, dtype=float))
     annual_debt_service = 0.0
+    debt_service_schedule: list[float] = []
     remaining_debt = 0.0
     debt_schedule: list[dict[str, float | int]] = []
     if debt > 0:
@@ -114,9 +115,14 @@ def underwrite_deal(deal: DealInputs) -> dict[str, float | list[float]]:
                 principal += scheduled_principal
                 balance = max(0.0, balance - scheduled_principal)
             debt_schedule.append({"year": year, "interest": interest, "principal": principal, "ending_balance": balance})
+            debt_service_schedule.append(interest + principal)
         remaining_debt = balance
-    dscr = [cash / annual_debt_service for cash in noi] if annual_debt_service else [float("inf")] * len(noi)
-    levered_flows = [-equity] + [cash - annual_debt_service for cash in noi[:-1]] + [noi[-1] + exit_value - selling_cost - annual_debt_service - remaining_debt]
+    if debt:
+        annual_debt_service = debt_service_schedule[0]
+    else:
+        debt_service_schedule = [0.0] * len(noi)
+    dscr = [cash / service if service else float("inf") for cash, service in zip(noi, debt_service_schedule)]
+    levered_flows = [-equity] + [cash - service for cash, service in zip(noi[:-1], debt_service_schedule[:-1])] + [noi[-1] + exit_value - selling_cost - debt_service_schedule[-1] - remaining_debt]
     total_distributions = sum(flow for flow in levered_flows if flow > 0)
     total_equity_invested = -sum(flow for flow in levered_flows if flow < 0)
     equity_multiple = total_distributions / total_equity_invested if total_equity_invested else float("nan")
@@ -128,6 +134,7 @@ def underwrite_deal(deal: DealInputs) -> dict[str, float | list[float]]:
         "remaining_debt_at_exit": remaining_debt,
         "minimum_dscr": float(min(dscr)),
         "debt_schedule": debt_schedule,
+        "debt_service_schedule": debt_service_schedule,
         "exit_value": exit_value,
         "unlevered_irr": unlevered_irr,
         "levered_irr": _irr(levered_flows),
