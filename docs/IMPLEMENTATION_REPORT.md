@@ -8,7 +8,7 @@ The default visual case is explicitly **ILLUSTRATIVE** and remains `REVIEW REQUI
 
 ## Package performance
 
-The pre-change default `python generate_committee_report.py` run took **86.66 seconds**. The final default run took **1.95 seconds**, a measured **44.4x** reduction. The dashboard configuration used by **Prepare review files** runs 1,000 seeded simulations and took **0.73 seconds** in a direct measurement.
+The pre-change default `python generate_committee_report.py` run took **86.66 seconds**. The final default run took **1.95 seconds**, a measured **44.4x** reduction. The dashboard configuration used by **Prepare review files** now runs the same 5,000 seeded simulations as the CLI and took **1.14 seconds** in a direct measurement.
 
 The default CLI package still uses 5,000 simulations with seed 42. The optimization did not lower that count. It batches the shared rate-grid calculation across simulations and uses the existing scalar root solver only to refine each scenario's first identified root. The regression suite locks the prior default risk-summary values, preserving the seeded default result contract.
 
@@ -54,7 +54,7 @@ The clean-room check cloned `review-fixes`, created a new virtual environment, i
 
 No deployment URL was added because no deployment exists yet; the previous placeholder was removed. The app was not deployed because deployment was explicitly reserved for the repository owner. The package does not claim to replace Excel, ARGUS, source documents, financial-model review, legal or tax diligence, or committee judgment. No real deals, clients, testimonials, benchmark claims, awards, or live market data were introduced.
 
-The default CLI simulation count was not reduced. The dashboard's already-separated 1,000-simulation package mode is labeled in the interface; the default CLI package remains 5,000 seeded simulations. The model still has its documented simplifications, including no complete operating statement, tax, capex, refinance, full capital stack, or source-document ingestion model.
+The default dashboard and CLI simulation counts now match at 5,000 seeded simulations. A regression test compares the dashboard-equivalent risk summary with the CLI package's `risk_summary.json` for the default case. The model still has its documented simplifications, including no complete operating statement, tax, capex, refinance, full capital stack, or source-document ingestion model.
 
 ## References
 

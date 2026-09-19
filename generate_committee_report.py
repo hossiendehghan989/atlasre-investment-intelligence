@@ -25,6 +25,7 @@ from src.lease import (
 from src.reconciliation import build_reconciliation_workbook
 
 MODEL_VERSION = "deterministic-core-v0.10"
+DEFAULT_RISK_SIMULATIONS = 5000
 
 
 def _assumption_values(deal: DealInputs, lease_inputs: LeaseUnderwritingInputs | None) -> dict[str, tuple[object, str]]:
@@ -67,7 +68,7 @@ def build_screening_package(
     source_status: str = "REVIEW REQUIRED",
     verified_by: str | None = None,
     source_reference: str | None = None,
-    simulations: int = 5000,
+    simulations: int = DEFAULT_RISK_SIMULATIONS,
     lease_inputs: LeaseUnderwritingInputs | None = None,
     model_version: str = MODEL_VERSION,
     hurdle_rate: float = 0.12,
@@ -268,7 +269,7 @@ def screening_package_zip(
     source_status: str = "REVIEW REQUIRED",
     verified_by: str | None = None,
     source_reference: str | None = None,
-    simulations: int = 5000,
+    simulations: int = DEFAULT_RISK_SIMULATIONS,
     lease_inputs: LeaseUnderwritingInputs | None = None,
     model_version: str = MODEL_VERSION,
     hurdle_rate: float = 0.12,

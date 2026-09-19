@@ -28,7 +28,7 @@ The dashboard reads its bundled market-input CSV using a path resolved from `das
 
 `requirements.txt` contains the runtime dependencies, including `openpyxl` for the reconciliation workbook. Community Cloud recognizes a root-level `requirements.txt` for pip installation. [3] `requirements.lock` remains the exact local and CI installation record; it is not the Community Cloud dependency declaration.
 
-The dashboard begins with a 500-simulation seeded risk summary and does not create the 1,000-simulation review ZIP until a user selects **Prepare review files**. This keeps initial rendering independent of report generation. The 5,000-simulation CLI package is intended for local or CI evidence generation, not first-page load. No system package is required, so `packages.txt` is intentionally absent.
+The dashboard and CLI both use 5,000 seeded simulations with seed 42. The dashboard computes its risk summary on first load and creates the same 5,000-simulation review ZIP when a user selects **Prepare review files**. No system package is required, so `packages.txt` is intentionally absent.
 
 ## Smoke test after deployment
 

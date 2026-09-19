@@ -1,7 +1,9 @@
+import json
 from io import BytesIO
 from zipfile import ZipFile
 
-from generate_committee_report import build_screening_package, screening_package_zip
+from generate_committee_report import DEFAULT_RISK_SIMULATIONS, build_screening_package, screening_package_zip
+from src.advanced_underwriting import monte_carlo_underwriting, risk_summary
 from src.atlasre import DealInputs
 
 
@@ -41,6 +43,17 @@ def test_screening_package_zip_is_readable():
     assert "monthly_development_model.csv" in names
     assert "lease_summary.csv" in names
     assert "excel_reconciliation.xlsx" in names
+
+
+def test_dashboard_and_cli_default_risk_numbers_match():
+    deal = DealInputs(10_000_000, 650_000, hold_years=5, leverage=.5)
+    dashboard_risk = risk_summary(
+        monte_carlo_underwriting(deal, simulations=DEFAULT_RISK_SIMULATIONS, seed=42),
+        hurdle_rate=.12,
+    )
+    cli_files = build_screening_package(deal, simulations=DEFAULT_RISK_SIMULATIONS)
+    cli_risk = json.loads(cli_files["risk_summary.json"])
+    assert dashboard_risk == cli_risk
 
 
 def test_verified_without_evidence_is_review_required_throughout_package():

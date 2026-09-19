@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from generate_committee_report import MODEL_VERSION, screening_package_zip
+from generate_committee_report import DEFAULT_RISK_SIMULATIONS, MODEL_VERSION, screening_package_zip
 from src.advanced_underwriting import monte_carlo_underwriting, risk_summary, stress_test
 from src.atlasre import DealInputs, rank_markets, scenario_matrix, underwrite_deal
 from src.committee_analytics import investment_committee_summary, sensitivity_table
@@ -48,13 +48,13 @@ st.markdown(
 
 @st.cache_data(show_spinner=False)
 def run_risk_case(deal: DealInputs, hurdle: float) -> tuple[pd.DataFrame, dict[str, float]]:
-    simulations = monte_carlo_underwriting(deal, simulations=500, seed=42)
+    simulations = monte_carlo_underwriting(deal, simulations=DEFAULT_RISK_SIMULATIONS, seed=42)
     return simulations, risk_summary(simulations, hurdle)
 
 
 @st.cache_data(show_spinner=False)
 def build_download(deal: DealInputs, hurdle_rate: float) -> bytes:
-    return screening_package_zip(deal, simulations=1_000, hurdle_rate=hurdle_rate)
+    return screening_package_zip(deal, simulations=DEFAULT_RISK_SIMULATIONS, hurdle_rate=hurdle_rate)
 
 
 @st.cache_data(show_spinner=False)
@@ -64,7 +64,7 @@ def build_excel_download(deal: DealInputs, hurdle_rate: float) -> bytes:
 
 def review_package_key(deal: DealInputs, hurdle_rate: float) -> str:
     """Identify the complete current package input set for the session cache."""
-    return repr((deal, hurdle_rate, MODEL_VERSION, 1_000))
+    return repr((deal, hurdle_rate, MODEL_VERSION, DEFAULT_RISK_SIMULATIONS))
 
 
 with st.sidebar:
@@ -170,7 +170,7 @@ with tab_screen:
         st.markdown("### Working files")
         st.caption(
             "The ZIP contains the review memo, assumptions, stress cases, risk summary, Excel reconciliation workbook, "
-            "rent-roll reference files, and a monthly development schedule. It uses 1,000 seeded downside simulations."
+            "rent-roll reference files, and a monthly development schedule. It uses 5,000 seeded downside simulations, matching the CLI package."
         )
         package_key = review_package_key(base_deal, hurdle)
         if st.session_state.get("review_package_key") not in {None, package_key}:

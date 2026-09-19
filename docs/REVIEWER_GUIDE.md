@@ -26,7 +26,7 @@ A reviewer should first confirm that the source status is appropriate. The defau
 
 The core model treats supplied annual NOI as **year-one NOI**. It grows NOI from year two onward. Exit value equals final-year NOI divided by exit cap rate, and selling cost is a percentage of exit value. Acquisition cost is a percentage of purchase price. Debt is one monthly amortizing loan; the outstanding balance at the end of the hold is deducted from final-year levered cash flow. Unlevered NPV includes the period-zero acquisition cash flow. Equity multiple divides all positive levered distributions by all negative levered contributions.
 
-The package uses a seeded Monte Carlo simulation with seed 42. The random input generation, clipping bounds, simulation count, and first-root IRR convention are deterministic. The default report uses 5,000 simulations. The dashboard review-file download uses 1,000 simulations and labels that count in its working-files panel.
+The package uses a seeded Monte Carlo simulation with seed 42. The random input generation, clipping bounds, simulation count, and first-root IRR convention are deterministic. The default report and dashboard review-file download both use 5,000 simulations. A regression test compares the dashboard-equivalent risk summary with the CLI package's serialized `risk_summary.json` for the default case.
 
 ## Known gaps
 
