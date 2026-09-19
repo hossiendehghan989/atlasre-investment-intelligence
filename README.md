@@ -144,3 +144,10 @@ The target operating model, high-level schema, agent boundaries, recommended sta
 The latest increment adds a dedicated monthly debt engine with interest-only periods, balloon maturity, monthly DSCR observations, and binding LTV/DSCR sizing; a deterministic IC workflow with side-by-side deal comparison, severity-ranked flags, and downloadable downside-first screening memos; stable versioned assumption IDs; and an active-set portfolio allocator that re-allocates around concentration caps while excluding assets below the minimum DSCR gate. The regression suite now contains 18 tests covering these behaviors.
 
 The system still does not claim live data ingestion, OCR, semantic search, AI agents, or persistent role-based approvals. Those are explicit remaining gaps, not mocked features.
+
+
+## Reference-grade model upgrade (v0.5)
+
+The financial core now includes a multi-tier LP/GP waterfall with return-of-capital, preferred return, ordered hurdles, tier-specific promote, and distribution checks. The monthly development model explicitly records lender fees, peak debt, capitalized interest, construction/stabilization timing, and annualizes monthly IRRs before reporting them. The uncertainty engine uses deterministic correlated shocks across growth, exit cap, purchase price, and debt rate, and reports P05/P10/median/P90/P95 IRR, negative-NPV probability, hurdle failure, and DSCR breach probability. Stress cases now include a rate shock and expose minimum DSCR.
+
+These upgrades are deliberately deterministic. They do not pretend to be a live data platform, a lease-level model, or an AI system. All assumptions remain explicit and challengeable.

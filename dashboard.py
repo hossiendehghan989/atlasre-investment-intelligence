@@ -9,7 +9,7 @@ from src.committee_analytics import investment_committee_summary, sensitivity_ta
 from src.debt import DebtTerms, monthly_debt_schedule, size_debt_from_constraints
 from src.governance import assumption_register, default_lineage, ic_workflow, lineage_json
 from src.ic_workflow import DealCase, compare_deals, generate_ic_memo
-from src.institutional import MonthlyDevelopmentInputs, monthly_development_model, size_debt
+from src.institutional import MonthlyDevelopmentInputs, WaterfallTier, monthly_development_model, multi_tier_waterfall, size_debt
 from src.portfolio import portfolio_allocation, portfolio_snapshot
 
 st.set_page_config(page_title="AtlasRE Investment Intelligence", page_icon="◆", layout="wide")
@@ -65,15 +65,15 @@ with underwriting_tab:
 with risk_tab:
     st.subheader("Risk engine")
     stress = stress_test(base_deal)
-    st.dataframe(stress.style.format({"levered_irr": "{:.1%}", "unlevered_irr": "{:.1%}", "npv": "${:,.0f}", "exit_value": "${:,.0f}"}), use_container_width=True, hide_index=True)
+    st.dataframe(stress.style.format({"levered_irr": "{:.1%}", "unlevered_irr": "{:.1%}", "npv": "${:,.0f}", "exit_value": "${:,.0f}", "minimum_dscr": "{:.2f}x"}), use_container_width=True, hide_index=True)
     simulations = monte_carlo_underwriting(base_deal, simulations=2000)
     summary = risk_summary(simulations, hurdle)
     risk_cols = st.columns(5)
-    risk_cols[0].metric("Median IRR", f"{summary['median_irr']:.1%}")
-    risk_cols[1].metric("P10 IRR", f"{summary['p10_irr']:.1%}")
-    risk_cols[2].metric("P90 IRR", f"{summary['p90_irr']:.1%}")
+    risk_cols[0].metric("P05 IRR", f"{summary['p05_irr']:.1%}")
+    risk_cols[1].metric("Median IRR", f"{summary['median_irr']:.1%}")
+    risk_cols[2].metric("P95 IRR", f"{summary['p95_irr']:.1%}")
     risk_cols[3].metric("Below hurdle", f"{summary['probability_irr_below_hurdle']:.1%}")
-    risk_cols[4].metric("Negative NPV", f"{summary['probability_negative_npv']:.1%}")
+    risk_cols[4].metric("DSCR < 1.25x", f"{summary['probability_dscr_below_125']:.1%}")
     st.bar_chart(simulations["levered_irr"].clip(-1, 1).round(3).value_counts().sort_index())
 
 with development_tab:
@@ -98,6 +98,14 @@ with development_tab:
     schedule = monthly_debt_schedule(constrained["recommended_loan"], terms, noi=monthly_noi)
     st.caption(f"Institutional sizing binding constraint: {constrained['binding_constraint']} · Recommended loan: ${constrained['recommended_loan']:,.0f}")
     st.dataframe(schedule.tail(12).style.format({"beginning_balance": "${:,.0f}", "interest": "${:,.0f}", "scheduled_payment": "${:,.0f}", "principal_paid": "${:,.0f}", "ending_balance": "${:,.0f}", "balloon_payoff": "${:,.0f}", "dscr": "{:.2f}x"}), use_container_width=True, hide_index=True)
+    st.subheader("Tiered LP / GP waterfall")
+    waterfall = multi_tier_waterfall(result["equity_required"], result["equity_required"] + max(result["project_profit_before_waterfall"], 0), 0.08, 5, [WaterfallTier(0.12, 0.20, "Tier 1"), WaterfallTier(0.18, 0.30, "Tier 2")])
+    waterfall_cols = st.columns(4)
+    waterfall_cols[0].metric("LP distribution", f"${waterfall['lp_total_distribution']:,.0f}")
+    waterfall_cols[1].metric("GP promote", f"${waterfall['gp_total_distribution']:,.0f}")
+    waterfall_cols[2].metric("Return of capital", f"${waterfall['return_of_capital']:,.0f}")
+    waterfall_cols[3].metric("Distribution check", f"${waterfall['distribution_check']:,.0f}")
+    st.dataframe(pd.DataFrame(waterfall["tiers"]).style.format({"hurdle_rate": "{:.1%}", "promote_pct": "{:.1%}", "tier_cash": "${:,.0f}", "lp_share": "${:,.0f}", "gp_share": "${:,.0f}"}), use_container_width=True, hide_index=True)
 
 with portfolio_tab:
     st.subheader("Portfolio impact")
