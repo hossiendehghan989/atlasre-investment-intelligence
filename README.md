@@ -130,3 +130,10 @@ python generate_committee_report.py
 ```
 
 It produces a Markdown investment-committee review, stress-case CSV, and monthly development-model CSV under `artifacts/`. The report is intentionally written as a screening document: it states what the model says, what it does not say, and which diligence steps must happen before an approval decision.
+
+
+## Institutional platform upgrade (v0.3)
+
+The repository now includes a governance and portfolio layer designed around the original brief. The Streamlit decision surface adds an IC workflow, version-ready assumption register, output lineage download, downside-first risk review, and portfolio allocation with concentration and DSCR flags. `src/governance.py` provides source/status labeling, machine-readable lineage records, and a tamper-evident hash-chain audit primitive. `src/portfolio.py` provides explicit capital-allocation constraints and portfolio snapshot metrics.
+
+The target operating model, high-level schema, agent boundaries, recommended stack, controls, and 8–12 week roadmap are documented in [`ATLASRE_ARCHITECTURE.md`](ATLASRE_ARCHITECTURE.md). This is intentionally an evolution of the existing Python/Streamlit core rather than a replacement: deterministic financial calculations remain the source of truth while future AI agents are constrained to cited, reviewable outputs.
