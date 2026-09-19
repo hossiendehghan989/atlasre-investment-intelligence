@@ -14,7 +14,7 @@ Work is being performed from the **local copy**, not directly from the remote ch
 - **Remote history:** 11 commits total. This is a same-day 11-commit history, not a one-commit history.
 - **Divergence:** local is 3 commits ahead of `origin/main` and 0 commits behind it.
 
-The remote baseline was independently checked in a temporary worktree at `origin/main`: **37 passed**. The current local copy passes **45 tests**.
+The remote baseline was independently checked in a temporary worktree at `origin/main`: **37 passed at the time of this audit**. The local copy at the time of this audit passed **45 tests**.
 
 ## 2. Local-only commits and file differences
 
@@ -42,7 +42,7 @@ Compared with `origin/main`, the local copy has these file differences:
 | Added | `tests/test_elevation_hardening.py` |
 | Modified | `tests/test_screening_package.py` |
 
-The local-only test changes are one new test module, `tests/test_elevation_hardening.py`, and updates to `tests/test_screening_package.py`. The local suite contains 13 test modules and passes 45 tests.
+The local-only test changes are one new test module, `tests/test_elevation_hardening.py`, and updates to `tests/test_screening_package.py`. At the time of this audit, the local suite contained 13 test modules and passed 45 tests.
 
 ## 3. Issue-by-issue verification against the local copy
 

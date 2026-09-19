@@ -26,6 +26,8 @@ A headless LibreOffice recalculation of the default workbook returned `PASS` for
 
 ## Validation evidence
 
+The measurements in this table are historical evidence from the release validation run; CI remains the current test and lint authority.
+
 | Check | Measured result |
 | --- | --- |
 | Local regression suite | 102 passed in 9.39 seconds |

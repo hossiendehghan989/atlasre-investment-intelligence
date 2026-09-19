@@ -52,7 +52,7 @@ This is a single-user, local prototype. It has no authentication, immutable audi
 
 ## Testing and deployment
 
-The test suite has **102 tests**. CI installs `requirements.lock`, runs `ruff check .`, and runs `python -m pytest -q`. The current package benchmark and reproducibility evidence are documented in [CHANGELOG.md](CHANGELOG.md). For Streamlit Community Cloud settings and deployment steps, see [DEPLOY.md](DEPLOY.md). The generated [illustrative sample package](docs/sample_output/README_ILLUSTRATIVE.md) and [demo script](docs/DEMO_SCRIPT.md) are available for review.
+CI installs `requirements.lock`, runs `ruff check .`, and runs `python -m pytest -q` on every push and pull request. The current package benchmark and reproducibility evidence are documented in [CHANGELOG.md](CHANGELOG.md). For Streamlit Community Cloud settings and deployment steps, see [DEPLOY.md](DEPLOY.md). The generated [illustrative sample package](docs/sample_output/README_ILLUSTRATIVE.md) and [demo script](docs/DEMO_SCRIPT.md) are available for review.
 
 ## Repository layout
 
