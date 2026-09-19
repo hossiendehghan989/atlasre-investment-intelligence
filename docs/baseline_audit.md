@@ -2,15 +2,15 @@
 
 **Audit date:** 2026-09-19  
 **Repository:** `https://github.com/hossiendehghan989/atlasre-investment-intelligence`  
-**Working copy:** local clone at `/home/ubuntu/workspace/atlasre-investment-intelligence`
+**Working copy:** local clone
 
 ## 1. Local versus remote state
 
 Work is being performed from the **local copy**, not directly from the remote checkout. The local working tree was clean before this audit and was on local branch `main` at:
 
 - **Local HEAD:** `bf8f05137860c76829e26ec46a33a3c0054e0e7a` (`style: replace generated dashboard copy`)
-- **Remote `origin/main` supplied in the task:** `ed2d47`.
-- **Remote `origin/main` verified live with `git ls-remote`:** `eed2d47b4e164795c08d06e15204547f1ceed348` (`feat: elevate ic package and add lease foundation`). The live remote does not currently advertise `ed2d47`; this discrepancy is recorded rather than silently substituted.
+- **Remote `origin/main` supplied in the task:** an abbreviated hash that differed from the live reference.
+- **Remote `origin/main` verified live with `git ls-remote`:** `eed2d47b4e164795c08d06e15204547f1ceed348` (`feat: elevate ic package and add lease foundation`). The full live reference is used for all comparisons.
 - **Remote history:** 11 commits total. This is a same-day 11-commit history, not a one-commit history.
 - **Divergence:** local is 3 commits ahead of `origin/main` and 0 commits behind it.
 

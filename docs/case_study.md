@@ -15,6 +15,7 @@ This example uses fixed inputs so a reviewer can reproduce the model outputs and
 | Exit cap rate | 6.50% |
 | Leverage | 55.00% |
 | Debt rate | 6.25% |
+| Debt amortization | 20 years |
 | Acquisition cost | 3.00% |
 | Selling cost | 2.00% |
 | Discount rate | 10.00% |
@@ -47,14 +48,17 @@ The flag means the case should remain in review until the operating statement, r
 
 ## Independent cross-checks
 
-The levered IRR was recomputed from the returned levered cash-flow vector with `numpy-financial`:
+The cross-check suite independently rebuilds the levered cash flows from the deal inputs: initial equity outlay, year-one and grown NOI, monthly debt amortization, annual debt service, exit value, selling costs, and remaining debt. It compares every element of that rebuilt vector with the model output and then calculates IRR on the rebuilt vector with `numpy-financial`.
 
 | Check | Model | Independent calculation | Difference |
 | --- | ---: | ---: | ---: |
-| Levered IRR | 14.149828% | 14.149828% | less than 2e-14 |
+| Levered cash-flow vector | model output | independent rebuild | every element within $1e-6 |
+| Levered IRR | 14.149828% | 14.149828% on rebuilt vector | less than 2e-14 |
 | Unlevered NPV | $110,935.66 | $110,935.66 | less than 2e-9 |
 
-The NPV check directly discounts the independently rebuilt unlevered cash flows, including acquisition cost, year-one NOI, subsequent grown NOI, terminal value, and selling costs. The debt test independently applies the monthly payment formula for a 6.25% annual rate and compares the resulting 60-month balance path with the model schedule within a $1e-6 tolerance.
+The NPV check directly discounts the independently rebuilt unlevered cash flows, including acquisition cost, year-one NOI, subsequent grown NOI, terminal value, and selling costs. The debt test uses the case-study debt principal of $4,675,000, a 6.25% annual rate, 20-year amortization, and a 60-month term. It compares every monthly ending balance from the closed-form amortization recurrence with the model schedule within a $1e-6 tolerance.
+
+These checks independently verify the IRR solver, the unlevered NPV calculation, the levered cash-flow construction, and the debt amortization path. They do not verify whether the supplied purchase price, NOI, exit cap, debt terms, or market assumptions are true; those require source documents and human review.
 
 ## Reproduction
 
