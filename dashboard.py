@@ -47,7 +47,7 @@ st.markdown(
 
 @st.cache_data(show_spinner=False)
 def run_risk_case(deal: DealInputs, hurdle: float) -> tuple[pd.DataFrame, dict[str, float]]:
-    simulations = monte_carlo_underwriting(deal, simulations=2_000, seed=42)
+    simulations = monte_carlo_underwriting(deal, simulations=500, seed=42)
     return simulations, risk_summary(simulations, hurdle)
 
 
