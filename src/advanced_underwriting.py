@@ -6,8 +6,9 @@ from math import isfinite
 
 import numpy as np
 import pandas as pd
+from scipy.optimize import brentq
 
-from .atlasre import DealInputs, _irr, underwrite_deal
+from .atlasre import DealInputs, _irr, _npv, underwrite_deal, validate_deal
 
 
 @dataclass(frozen=True)
@@ -72,12 +73,119 @@ def development_feasibility(project: DevelopmentInputs) -> dict[str, float | lis
     return {"total_development_cost": total_cost, "contingency": contingency, "debt_amount": debt, "equity_required": equity, "annual_construction_draw": total_cost / project.construction_years, "capitalized_interest": debt_interest, "exit_value": exit_value, "project_profit_before_waterfall": project_profit, "investor_irr": _irr(investor_flows), "investor_equity_multiple": (equity + investor_profit) / equity, "sponsor_promote": sponsor_promote, "investor_cash_flows": investor_flows, "sponsor_cash_flows": sponsor_flows}
 
 
-def monte_carlo_underwriting(deal: DealInputs, simulations: int = 5000, seed: int = 42, correlation: float = -0.25) -> pd.DataFrame:
-    """Run reproducible correlated shocks to growth, exit cap, price, and debt rate."""
+def _first_irr_roots(cash_flows: np.ndarray) -> np.ndarray:
+    """Return the same first reachable roots selected by ``src.atlasre._irr``.
+
+    The rate grid is evaluated for every simulation in one array operation, then
+    the existing scalar NPV function refines only the first bracket for each
+    scenario.  Keeping ``_npv`` inside ``brentq`` preserves the public model's
+    first-root convention and its numerical results while avoiding millions of
+    repeated grid evaluations.
+    """
+    rate_grid = np.concatenate(
+        [np.array([-0.999999, -0.99, -0.90, -0.50, -0.10, 0.0]), np.logspace(-4, 3, 500)]
+    )
+    periods = np.arange(cash_flows.shape[1], dtype=float)
+    discount_factors = np.power(1 + rate_grid[:, None], periods)
+    npv_grid = cash_flows @ (1 / discount_factors).T
+    left = npv_grid[:, :-1]
+    right = npv_grid[:, 1:]
+    candidates = (left == 0) | (np.isfinite(left) & np.isfinite(right) & (left * right < 0))
+    has_candidate = candidates.any(axis=1)
+    first_index = candidates.argmax(axis=1)
+    roots = np.full(cash_flows.shape[0], np.nan, dtype=float)
+
+    for row_index in np.flatnonzero(has_candidate):
+        grid_index = int(first_index[row_index])
+        left_rate = float(rate_grid[grid_index])
+        if left[row_index, grid_index] == 0:
+            roots[row_index] = left_rate
+            continue
+        right_rate = float(rate_grid[grid_index + 1])
+        flow = cash_flows[row_index]
+        roots[row_index] = float(brentq(lambda rate: _npv(rate, flow), left_rate, right_rate))
+    return roots
+
+
+def _vectorized_underwriting_outputs(
+    deal: DealInputs,
+    prices: np.ndarray,
+    growth: np.ndarray,
+    exit_caps: np.ndarray,
+    debt_rates: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Calculate simulation outputs using the core model's annual conventions."""
+    count = prices.size
+    years = np.arange(deal.hold_years, dtype=float)
+    acquisition = prices * (1 + deal.acquisition_cost_pct)
+    debt = prices * deal.leverage
+    equity = acquisition - debt
+    noi = deal.annual_noi * np.power(1 + growth[:, None], years)
+    exit_value = noi[:, -1] / exit_caps
+    selling_cost = exit_value * deal.selling_cost_pct
+
+    debt_service = np.zeros((count, deal.hold_years), dtype=float)
+    balance = debt.copy()
+    monthly_rate = debt_rates / 12
+    amortization_periods = deal.debt_amortization_years * 12
+    payment = np.where(
+        monthly_rate == 0,
+        debt / amortization_periods,
+        debt * (monthly_rate * np.power(1 + monthly_rate, amortization_periods))
+        / (np.power(1 + monthly_rate, amortization_periods) - 1),
+    )
+    for year in range(deal.hold_years):
+        annual_service = np.zeros(count, dtype=float)
+        for _ in range(12):
+            interest = balance * monthly_rate
+            principal = np.minimum(np.maximum(payment - interest, 0.0), balance)
+            annual_service += interest + principal
+            balance = np.maximum(0.0, balance - principal)
+        debt_service[:, year] = annual_service
+
+    unlevered_flows = np.empty((count, deal.hold_years + 1), dtype=float)
+    unlevered_flows[:, 0] = -acquisition
+    unlevered_flows[:, 1:] = noi
+    unlevered_flows[:, -1] += exit_value - selling_cost
+    discount_factors = np.power(1 + deal.discount_rate, np.arange(deal.hold_years + 1, dtype=float))
+    unlevered_npv = np.sum(unlevered_flows / discount_factors, axis=1)
+
+    levered_flows = unlevered_flows.copy()
+    levered_flows[:, 0] = -equity
+    levered_flows[:, 1:] -= debt_service
+    levered_flows[:, -1] -= balance
+    levered_irr = _first_irr_roots(levered_flows)
+    minimum_dscr = np.min(
+        np.divide(noi, debt_service, out=np.full_like(noi, np.inf), where=debt_service != 0), axis=1
+    )
+    return levered_irr, unlevered_npv, minimum_dscr
+
+
+def monte_carlo_underwriting(
+    deal: DealInputs,
+    simulations: int = 5000,
+    seed: int = 42,
+    correlation: float = -0.25,
+) -> pd.DataFrame:
+    """Run reproducible correlated shocks to growth, exit cap, price, and debt rate.
+
+    Simulation inputs, the random number generator, clipping bounds, result
+    schema, and the core model's first-root IRR semantics are unchanged.  The
+    scenario calculations are batched so the same seeded default package can be
+    prepared interactively.
+    """
+    validate_deal(deal)
     if simulations <= 0 or not -1 < correlation < 1:
         raise ValueError("simulations must be positive and correlation must be between -1 and 1")
     rng = np.random.default_rng(seed)
-    cov = np.array([[1.0, correlation, 0.15, 0.0], [correlation, 1.0, -0.10, 0.0], [0.15, -0.10, 1.0, 0.20], [0.0, 0.0, 0.20, 1.0]])
+    cov = np.array(
+        [
+            [1.0, correlation, 0.15, 0.0],
+            [correlation, 1.0, -0.10, 0.0],
+            [0.15, -0.10, 1.0, 0.20],
+            [0.0, 0.0, 0.20, 1.0],
+        ]
+    )
     if np.linalg.eigvalsh(cov).min() < -1e-10:
         raise ValueError("shock covariance matrix must be positive semi-definite")
     shocks = rng.multivariate_normal(np.zeros(4), cov, simulations, check_valid="raise")
@@ -85,12 +193,20 @@ def monte_carlo_underwriting(deal: DealInputs, simulations: int = 5000, seed: in
     exit_caps = np.clip(deal.exit_cap_rate + shocks[:, 1] * 0.008, 0.025, 0.20)
     prices = deal.purchase_price * np.exp(shocks[:, 2] * 0.03)
     debt_rates = np.clip(deal.debt_rate + shocks[:, 3] * 0.0075, 0.01, 0.20)
-    rows = []
-    for p, g, cap, debt_rate in zip(prices, growth, exit_caps, debt_rates):
-        scenario = DealInputs(**{**deal.__dict__, "purchase_price": float(p), "annual_noi_growth": float(g), "exit_cap_rate": float(cap), "debt_rate": float(debt_rate)})
-        result = underwrite_deal(scenario)
-        rows.append({"purchase_price": p, "noi_growth": g, "exit_cap_rate": cap, "debt_rate": debt_rate, "levered_irr": result["levered_irr"], "unlevered_npv": result["unlevered_npv"], "minimum_dscr": result["minimum_dscr"]})
-    return pd.DataFrame(rows)
+    levered_irr, unlevered_npv, minimum_dscr = _vectorized_underwriting_outputs(
+        deal, prices, growth, exit_caps, debt_rates
+    )
+    return pd.DataFrame(
+        {
+            "purchase_price": prices,
+            "noi_growth": growth,
+            "exit_cap_rate": exit_caps,
+            "debt_rate": debt_rates,
+            "levered_irr": levered_irr,
+            "unlevered_npv": unlevered_npv,
+            "minimum_dscr": minimum_dscr,
+        }
+    )
 
 
 def risk_summary(simulations: pd.DataFrame, hurdle_rate: float = 0.12) -> dict[str, float]:
