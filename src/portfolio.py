@@ -31,14 +31,15 @@ def allocate_capital(deals: pd.DataFrame, available_equity: float, max_single_as
         if total_score <= 0:
             break
         proposed = active_scores / total_score * remaining
-        capped = proposed[proposed > cap + 1e-9]
+        equity_caps = deals.loc[proposed.index, "equity_required"].astype(float).clip(upper=cap)
+        capped = proposed[proposed > equity_caps + 1e-9]
         if capped.empty:
             allocation.loc[proposed.index] += proposed
             remaining = 0.0
             break
         for idx in sorted(capped.index, key=str):
-            allocation.loc[idx] += cap
-            remaining -= cap
+            allocation.loc[idx] += float(equity_caps.loc[idx])
+            remaining -= float(equity_caps.loc[idx])
             active.remove(idx)
     return allocation
 
@@ -53,9 +54,25 @@ def portfolio_allocation(deals: pd.DataFrame, available_equity: float, max_singl
     output["eligible"] = output["capital_eligible"] & output["dscr_eligible"]
     output["recommended_allocation"] = allocate_capital(output, available_equity, max_single_asset_pct, min_dscr)
     allocated = float(output["recommended_allocation"].sum())
+    output["unallocated_equity"] = float(available_equity - allocated)
     output["allocation_weight"] = output["recommended_allocation"] / allocated if allocated else 0.0
     output["constraint_flag"] = output.apply(lambda row: "Pass" if row["eligible"] and row["recommended_allocation"] > 0 else "Review", axis=1)
-    output["constraint_reason"] = output.apply(lambda row: "Allocated" if row["recommended_allocation"] > 0 else ("Capital limit" if not row["capital_eligible"] else ("DSCR gate" if not row["dscr_eligible"] else "No score / rationed")), axis=1)
+    output["constraint_reason"] = output.apply(
+        lambda row: (
+            "Equity requirement cap"
+            if row["recommended_allocation"] > 0 and row["recommended_allocation"] >= row["equity_required"] - 1e-9
+            else "Concentration cap"
+            if row["recommended_allocation"] > 0 and row["recommended_allocation"] >= available_equity * max_single_asset_pct - 1e-9
+            else "Allocated"
+            if row["recommended_allocation"] > 0
+            else "Capital limit"
+            if not row["capital_eligible"]
+            else "DSCR gate"
+            if not row["dscr_eligible"]
+            else "No score / rationed"
+        ),
+        axis=1,
+    )
     return output
 
 
