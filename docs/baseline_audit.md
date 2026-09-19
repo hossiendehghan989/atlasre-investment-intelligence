@@ -9,7 +9,8 @@
 Work is being performed from the **local copy**, not directly from the remote checkout. The local working tree was clean before this audit and was on local branch `main` at:
 
 - **Local HEAD:** `bf8f05137860c76829e26ec46a33a3c0054e0e7a` (`style: replace generated dashboard copy`)
-- **Remote `origin/main`:** `eed2d47b4e164795c08d06e15204547f1ceed348` (`feat: elevate ic package and add lease foundation`)
+- **Remote `origin/main` supplied in the task:** `ed2d47`.
+- **Remote `origin/main` verified live with `git ls-remote`:** `eed2d47b4e164795c08d06e15204547f1ceed348` (`feat: elevate ic package and add lease foundation`). The live remote does not currently advertise `ed2d47`; this discrepancy is recorded rather than silently substituted.
 - **Remote history:** 11 commits total. This is a same-day 11-commit history, not a one-commit history.
 - **Divergence:** local is 3 commits ahead of `origin/main` and 0 commits behind it.
 
@@ -63,6 +64,6 @@ The local-only test changes are one new test module, `tests/test_elevation_harde
 
 ## 4. Baseline decision
 
-The `review-fixes` branch must be created from the **current local state** at `bf8f051`, not from remote `origin/main`. The remote 37-test baseline is preserved as a reference point; the local 45-test suite and local lease/governance/dashboard work must not be discarded.
+The `review-fixes` branch was created from the **current local state** at `bf8f051`, not from remote `origin/main`, and currently contains the audit commit `75226cb`. The remote 37-test baseline is preserved as a reference point; the local 45-test suite and local lease/governance/dashboard work must not be discarded.
 
-No implementation changes were made before this audit file. The next step is to create `review-fixes` from the local state and implement the requested fixes in small, separate commits.
+No implementation changes were made before this audit file. The next step is to implement the requested fixes in small, separate commits.
