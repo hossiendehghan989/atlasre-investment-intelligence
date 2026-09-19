@@ -192,7 +192,7 @@ def multi_tier_waterfall(equity: float, total_distributable_cash: float, pref_ra
 def lp_gp_waterfall(equity: float, distributable_profit: float, pref_rate: float, hold_years: int, promote_pct: float) -> dict[str, float]:
     """Backward-compatible single-promote wrapper using total proceeds semantics."""
     result = multi_tier_waterfall(equity, equity + distributable_profit, pref_rate, hold_years, [WaterfallTier(pref_rate + 0.0001, promote_pct, "Promote")])
-    return {key: value for key, value in result.items() if isinstance(value, (float, int))}
+    return {key: value for key, value in result.items() if isinstance(value, float | int)}
 
 
 def assumption_quality(inputs: dict[str, float | str | int]) -> pd.DataFrame:

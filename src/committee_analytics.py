@@ -13,7 +13,7 @@ def sensitivity_table(base: DealInputs, parameter: str, values: list[float]) -> 
     supported = {"purchase_price", "annual_noi", "annual_noi_growth", "exit_cap_rate", "leverage", "debt_rate"}
     if parameter not in supported:
         raise ValueError(f"parameter must be one of {sorted(supported)}")
-    if any(not isinstance(value, (int, float)) or not finite(value, "sensitivity value") for value in values):
+    if any(not isinstance(value, int | float) or not finite(value, "sensitivity value") for value in values):
         raise ValueError("sensitivity values must be finite")
     rows = []
     for value in values:

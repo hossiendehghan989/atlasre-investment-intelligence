@@ -171,7 +171,7 @@ def _canonicalize(value: Any) -> Any:
     """Normalize common container types without losing material values."""
     if isinstance(value, dict):
         return {str(key): _canonicalize(item) for key, item in sorted(value.items(), key=lambda item: str(item[0]))}
-    if isinstance(value, (list, tuple)):
+    if isinstance(value, list | tuple):
         return [_canonicalize(item) for item in value]
     if hasattr(value, "item"):
         try:
