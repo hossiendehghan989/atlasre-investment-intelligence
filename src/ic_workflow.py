@@ -32,10 +32,17 @@ class DealCase:
     name: str
     inputs: DealInputs
     source_status: str = "REVIEW REQUIRED"
+    verified_by: str | None = None
+    source_reference: str | None = None
 
     def validate(self) -> None:
         if not self.deal_id or not self.name or self.source_status not in {"VERIFIED", "REVIEW REQUIRED"}:
             raise ValueError("deal identity and source_status must be valid")
+
+    def effective_source_status(self) -> str:
+        if self.source_status == "VERIFIED" and self.verified_by and self.source_reference:
+            return "VERIFIED"
+        return "REVIEW REQUIRED"
 
 
 class ScreeningFlag(TypedDict):
@@ -50,9 +57,13 @@ def screen_case(case: DealCase, thresholds: ScreeningThresholds | None = None) -
     thresholds = thresholds or ScreeningThresholds()
     thresholds.validate()
     result = underwrite_deal(case.inputs)
+    source_status = case.effective_source_status()
     flags: list[ScreeningFlag] = []
-    if case.source_status != thresholds.source_status_required:
-        flags.append({"severity": "GOVERNANCE", "flag": "Source package is not verified", "evidence": case.source_status})
+    if source_status != thresholds.source_status_required:
+        evidence = case.source_status
+        if case.source_status == "VERIFIED":
+            evidence = "VERIFIED requires verified_by and source_reference"
+        flags.append({"severity": "GOVERNANCE", "flag": "Source package is not verified", "evidence": evidence})
     if result["unlevered_npv"] < 0:
         flags.append({"severity": "CRITICAL", "flag": "Negative unlevered NPV", "evidence": f"${result['unlevered_npv']:,.0f}"})
     if result["minimum_dscr"] < thresholds.minimum_dscr:
@@ -69,7 +80,7 @@ def screen_case(case: DealCase, thresholds: ScreeningThresholds | None = None) -
         status = "REVIEW REQUIRED"
     else:
         status = "PASSES INITIAL SCREEN"
-    return {"deal_id": case.deal_id, "status": status, "flags": flags, "metrics": result}
+    return {"deal_id": case.deal_id, "status": status, "source_status": source_status, "flags": flags, "metrics": result}
 
 
 def compare_deals(cases: list[DealCase], hurdle_rate: float = 0.12) -> pd.DataFrame:
@@ -86,7 +97,7 @@ def compare_deals(cases: list[DealCase], hurdle_rate: float = 0.12) -> pd.DataFr
         rows.append({
             "deal_id": case.deal_id,
             "deal": case.name,
-            "source_status": case.source_status,
+            "source_status": screen["source_status"],
             "decision_status": screen["status"],
             "critical_flags": sum(flag["severity"] == "CRITICAL" for flag in flags),
             "review_flags": sum(flag["severity"] in {"HIGH", "GOVERNANCE"} for flag in flags),
@@ -146,7 +157,7 @@ def generate_ic_memo(
 **Deal ID:** {case.deal_id}  
 **Prepared by:** {author}  
 **As of:** {datetime.now(UTC).date().isoformat()}
-**Source status:** **{case.source_status}**
+**Source status:** **{screen['source_status']}**
 **Decision status:** **{screen['status']}**
 **Model-run fingerprint:** `{fingerprint}`
 
