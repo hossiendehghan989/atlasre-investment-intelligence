@@ -28,6 +28,20 @@ def test_market_ranking_penalizes_risk():
     assert market_score(markets.iloc[1].to_dict())["risk_adjusted_score"] > 0
 
 
+def test_market_score_applies_risk_once_and_keeps_aliases_consistent():
+    market = {
+        "population_growth": 0.8,
+        "employment_growth": 0.8,
+        "rent_growth": 0.8,
+        "liquidity": 0.8,
+        "risk": 0.8,
+    }
+    result = market_score(market)
+    expected = (0.8 * 0.25) + (0.8 * 0.20) + (0.8 * 0.25) + (0.8 * 0.15) + ((1 - 0.8) * 0.15)
+    assert result["score_0_100"] == pytest.approx(expected * 100)
+    assert result["risk_adjusted_score"] == pytest.approx(result["score_0_100"])
+
+
 def test_portfolio_exposure_respects_capital():
     deals = pd.DataFrame([
         {"asset": "A", "equity_required": 100, "risk_adjusted_score": 80},

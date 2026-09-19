@@ -124,6 +124,13 @@ def scenario_matrix(base: DealInputs, growth_rates=(0.0, 0.03, 0.06), exit_caps=
 
 
 def market_score(market: dict[str, float], weights: dict[str, float] | None = None) -> dict[str, float]:
+    """Return one risk-adjusted composite score on a 0–100 scale.
+
+    ``risk`` is a downside factor, so it enters exactly once as ``1 - risk``
+    under its configured weight. ``risk_adjusted_score`` is retained as a
+    compatibility alias for the same composite score; it is not multiplied by
+    risk a second time.
+    """
     weights = weights or {"population_growth": 0.25, "employment_growth": 0.20, "rent_growth": 0.25, "liquidity": 0.15, "risk": 0.15}
     required = {"population_growth", "employment_growth", "rent_growth", "liquidity", "risk"}
     if not required.issubset(market) or any(not isfinite(float(market[key])) for key in required):
@@ -133,7 +140,8 @@ def market_score(market: dict[str, float], weights: dict[str, float] | None = No
     if any(not 0 <= market[key] <= 1 for key in required):
         raise ValueError("market factors must be normalized to [0, 1]")
     score = sum(market[key] * weight for key, weight in weights.items() if key != "risk") + (1 - market["risk"]) * weights["risk"]
-    return {"score_0_100": float(np.clip(score * 100, 0, 100)), "risk_adjusted_score": float(np.clip(score * (1 - market["risk"]) * 100, 0, 100))}
+    composite = float(np.clip(score * 100, 0, 100))
+    return {"score_0_100": composite, "risk_adjusted_score": composite}
 
 
 def rank_markets(markets: pd.DataFrame) -> pd.DataFrame:
