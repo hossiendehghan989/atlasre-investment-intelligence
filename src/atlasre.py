@@ -113,7 +113,26 @@ def underwrite_deal(deal: DealInputs) -> dict[str, float | list[float]]:
         remaining_debt = balance
     dscr = [cash / annual_debt_service for cash in noi] if annual_debt_service else [float("inf")] * len(noi)
     levered_flows = [-equity] + [cash - annual_debt_service for cash in noi[:-1]] + [noi[-1] + exit_value - selling_cost - annual_debt_service - remaining_debt]
-    return {"entry_cap_rate": deal.annual_noi / deal.purchase_price, "equity_required": equity, "debt_amount": debt, "annual_debt_service": annual_debt_service, "remaining_debt_at_exit": remaining_debt, "minimum_dscr": float(min(dscr)), "debt_schedule": debt_schedule, "exit_value": exit_value, "unlevered_irr": unlevered_irr, "levered_irr": _irr(levered_flows), "unlevered_npv": discount_flows, "equity_multiple": float(sum(max(flow, 0) for flow in levered_flows) / equity), "cash_flows": levered_flows}
+    total_distributions = sum(flow for flow in levered_flows if flow > 0)
+    total_equity_invested = -sum(flow for flow in levered_flows if flow < 0)
+    equity_multiple = total_distributions / total_equity_invested if total_equity_invested else float("nan")
+    return {
+        "entry_cap_rate": deal.annual_noi / deal.purchase_price,
+        "equity_required": equity,
+        "debt_amount": debt,
+        "annual_debt_service": annual_debt_service,
+        "remaining_debt_at_exit": remaining_debt,
+        "minimum_dscr": float(min(dscr)),
+        "debt_schedule": debt_schedule,
+        "exit_value": exit_value,
+        "unlevered_irr": unlevered_irr,
+        "levered_irr": _irr(levered_flows),
+        "unlevered_npv": discount_flows,
+        "total_distributions": float(total_distributions),
+        "total_equity_invested": float(total_equity_invested),
+        "equity_multiple": float(equity_multiple),
+        "cash_flows": levered_flows,
+    }
 
 
 def scenario_matrix(base: DealInputs, growth_rates=(0.0, 0.03, 0.06), exit_caps=(0.05, 0.06, 0.08)) -> pd.DataFrame:

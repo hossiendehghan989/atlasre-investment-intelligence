@@ -19,6 +19,17 @@ def test_year_one_noi_is_the_input_noi_before_growth():
     assert result["exit_value"] == pytest.approx(expected_final_noi / deal.exit_cap_rate)
 
 
+def test_equity_multiple_counts_negative_interim_equity_flows_as_new_investment():
+    deal = DealInputs(10_000_000, 100_000, hold_years=3, leverage=.80, debt_rate=.20)
+    result = underwrite_deal(deal)
+    negative_flows = sum(flow for flow in result["cash_flows"] if flow < 0)
+    positive_flows = sum(flow for flow in result["cash_flows"] if flow > 0)
+    assert any(flow < 0 for flow in result["cash_flows"][1:-1])
+    assert result["total_equity_invested"] == pytest.approx(-negative_flows)
+    assert result["total_distributions"] == pytest.approx(positive_flows)
+    assert result["equity_multiple"] == pytest.approx(positive_flows / -negative_flows)
+
+
 def test_scenario_matrix_changes_exit_value():
     matrix = scenario_matrix(DealInputs(10_000_000, 650_000))
     assert len(matrix) == 9
