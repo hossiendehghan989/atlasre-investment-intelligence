@@ -13,6 +13,7 @@ from src.ic_workflow import DealCase, compare_deals, generate_ic_memo, screen_ca
 from src.lease import LeaseUnderwritingInputs, illustrative_rent_roll, lease_summary, underwrite_with_lease_roll
 from src.portfolio import portfolio_allocation, portfolio_risk_view, portfolio_snapshot
 from src.presentation import fraction_from_percent
+from src.reconciliation import build_reconciliation_workbook
 
 ROOT = Path(__file__).resolve().parent
 
@@ -52,8 +53,18 @@ def run_risk_case(deal: DealInputs, hurdle: float) -> tuple[pd.DataFrame, dict[s
 
 
 @st.cache_data(show_spinner=False)
-def build_download(deal: DealInputs) -> bytes:
-    return screening_package_zip(deal, simulations=1_000)
+def build_download(deal: DealInputs, hurdle_rate: float) -> bytes:
+    return screening_package_zip(deal, simulations=1_000, hurdle_rate=hurdle_rate)
+
+
+@st.cache_data(show_spinner=False)
+def build_excel_download(deal: DealInputs, hurdle_rate: float) -> bytes:
+    return build_reconciliation_workbook(deal, hurdle_rate=hurdle_rate, model_version=MODEL_VERSION)
+
+
+def review_package_key(deal: DealInputs, hurdle_rate: float) -> str:
+    """Identify the complete current package input set for the session cache."""
+    return repr((deal, hurdle_rate, MODEL_VERSION, 1_000))
 
 
 with st.sidebar:
@@ -143,6 +154,7 @@ base_cols[4].metric("Exit value", f"${underwriting['exit_value']:,.0f}")
 
 st.markdown("<div class='section-rule'></div>", unsafe_allow_html=True)
 tab_screen, tab_returns, tab_debt, tab_portfolio, tab_audit = st.tabs(["Review note", "Returns", "Debt / rent roll", "Portfolio fit", "Inputs & record"])
+review_memo = generate_ic_memo(current_case, hurdle, model_version=MODEL_VERSION, risk_metrics=risk)
 
 with tab_screen:
     left, right = st.columns([2, 1])
@@ -152,14 +164,41 @@ with tab_screen:
         st.info(review_focus)
         st.markdown("### Next diligence")
         st.write("Reconcile the rent roll and operating statement. Validate the exit-cap evidence and terminal-value timing. Obtain the financing term sheet and review covenants, fees, amortization, and maturity.")
+        with st.expander("Preview review memo", expanded=False):
+            st.markdown(review_memo)
     with right:
         st.markdown("### Working files")
-        st.caption("The download contains the review memo, assumptions, stress cases, risk summary, debt schedule, and rent-roll reference files.")
+        st.caption(
+            "The ZIP contains the review memo, assumptions, stress cases, risk summary, Excel reconciliation workbook, "
+            "rent-roll reference files, and a monthly development schedule. It uses 1,000 seeded downside simulations."
+        )
+        package_key = review_package_key(base_deal, hurdle)
+        if st.session_state.get("review_package_key") not in {None, package_key}:
+            st.caption("Inputs changed after the last package was prepared. Prepare new review files before download.")
+            st.session_state.pop("review_package", None)
         if st.button("Prepare review files", use_container_width=True):
-            st.session_state["review_package"] = build_download(base_deal)
-        if "review_package" in st.session_state:
+            with st.status("Preparing review files", expanded=True) as package_status:
+                package_status.write("Validating inputs and running the seeded downside simulation.")
+                st.session_state["review_package"] = build_download(base_deal, hurdle)
+                package_status.write("Assembling the memo, schedules, and reconciliation workbook.")
+                package_status.update(label="Review files ready", state="complete", expanded=False)
+            st.session_state["review_package_key"] = package_key
+        if st.session_state.get("review_package_key") == package_key and "review_package" in st.session_state:
             st.download_button("Download review files", st.session_state["review_package"], file_name="atlasre-deal-review.zip", mime="application/zip", use_container_width=True)
-        st.download_button("Download review memo", generate_ic_memo(current_case, hurdle, model_version=MODEL_VERSION, risk_metrics=risk), file_name="atlasre-deal-review.md", mime="text/markdown", use_container_width=True)
+        st.download_button(
+            "Download Excel reconciliation",
+            build_excel_download(base_deal, hurdle),
+            file_name="atlasre-excel-reconciliation.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+        )
+        st.download_button(
+            "Download review memo",
+            review_memo,
+            file_name="atlasre-deal-review.md",
+            mime="text/markdown",
+            use_container_width=True,
+        )
 
 with tab_returns:
     st.markdown("### Stress cases")
