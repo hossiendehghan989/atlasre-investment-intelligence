@@ -4,7 +4,7 @@ AtlasRE is configured for Streamlit Community Cloud with `dashboard.py` as the e
 
 ## Pre-deployment check
 
-Run the following commands from the repository root on Python 3.12, which is the version used for the local release checks:
+Run the following commands from the repository root on Python 3.11, which is the version used by the hosted app and local release checks:
 
 ```bash
 python -m pip install -r requirements.lock
@@ -20,7 +20,7 @@ The dashboard reads its bundled market-input CSV using a path resolved from `das
 1. Push the desired commit to GitHub. The review branch is `review-fixes`; select that branch for review deployment, or select the later branch that contains the commit you intend to publish.
 2. At [share.streamlit.io](https://share.streamlit.io/), choose **Create app**, then select the repository and branch. Community Cloud accepts a repository, branch, and entrypoint path in the creation form. [2]
 3. Set the main file path to `dashboard.py`.
-4. Open **Advanced settings** and select **Python 3.12**. Community Cloud defaults to Python 3.12 but supports selecting a version there; selecting it explicitly matches the local validation environment. [2]
+4. Open **Advanced settings** and select **Python 3.11**. Community Cloud supports selecting the Python version there; selecting it explicitly matches the hosted app and CI validation environment. [2]
 5. Leave the secrets field empty. This prototype has no secret, credential, or external-service requirement.
 6. Deploy and inspect the build log. The first page should display the default **ILLUSTRATIVE** review case, including source status `REVIEW REQUIRED`.
 
