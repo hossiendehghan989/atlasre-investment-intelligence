@@ -12,6 +12,13 @@ def test_underwriting_has_consistent_cash_flow_outputs():
     assert result["equity_multiple"] > 1
 
 
+def test_year_one_noi_is_the_input_noi_before_growth():
+    deal = DealInputs(10_000_000, 650_000, hold_years=3, annual_noi_growth=0.10)
+    result = underwrite_deal(deal)
+    expected_final_noi = 650_000 * (1.10 ** 2)
+    assert result["exit_value"] == pytest.approx(expected_final_noi / deal.exit_cap_rate)
+
+
 def test_scenario_matrix_changes_exit_value():
     matrix = scenario_matrix(DealInputs(10_000_000, 650_000))
     assert len(matrix) == 9

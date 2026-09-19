@@ -75,12 +75,17 @@ def _irr(cash_flows: Iterable[float]) -> float:
 
 
 def underwrite_deal(deal: DealInputs) -> dict[str, float | list[float]]:
-    """Produce auditable annual unlevered and levered underwriting outputs."""
+    """Produce auditable annual underwriting outputs.
+
+    Convention: ``annual_noi`` is the NOI for year one of ownership. Growth is
+    applied from year two onward, so the year-one NOI is not grown before the
+    first period is measured.
+    """
     validate_deal(deal)
     acquisition = deal.purchase_price * (1 + deal.acquisition_cost_pct)
     debt = deal.purchase_price * deal.leverage
     equity = acquisition - debt
-    noi = [deal.annual_noi * (1 + deal.annual_noi_growth) ** year for year in range(1, deal.hold_years + 1)]
+    noi = [deal.annual_noi * (1 + deal.annual_noi_growth) ** year for year in range(deal.hold_years)]
     exit_value = noi[-1] / deal.exit_cap_rate
     selling_cost = exit_value * deal.selling_cost_pct
     unlevered_flows = [-acquisition] + noi[:-1] + [noi[-1] + exit_value - selling_cost]
