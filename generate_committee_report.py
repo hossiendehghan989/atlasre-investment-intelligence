@@ -6,6 +6,8 @@ import zipfile
 from io import BytesIO
 from pathlib import Path
 
+import pandas as pd
+
 from src.advanced_underwriting import monte_carlo_underwriting, risk_summary, stress_test
 from src.atlasre import DealInputs, underwrite_deal
 from src.committee_analytics import investment_committee_summary
@@ -220,11 +222,12 @@ The package includes an illustrative monthly development schedule for reference.
 
 `{fingerprint}`
 
-The fingerprint hashes the model version, assumption snapshot, and lineage records. The package includes `assumptions.csv`, `lineage.json`, `risk_summary.json`, and `stress_cases.csv`. It is a reproducibility handle, not a persistent approval ledger.
+The fingerprint hashes the model version, assumption snapshot, and lineage records. The package includes `assumptions.csv`, `annual_debt_schedule.csv`, `lineage.json`, `risk_summary.json`, and `stress_cases.csv`. It is a reproducibility handle, not a persistent approval ledger.
 """
     files: dict[str, bytes] = {
         "investment_committee_report.md": report.encode("utf-8"),
         "stress_cases.csv": stress.to_csv(index=False).encode("utf-8"),
+        "annual_debt_schedule.csv": pd.DataFrame(underwriting["debt_schedule"]).to_csv(index=False).encode("utf-8"),
         "monthly_development_model.csv": monthly_development.to_csv(index=False).encode("utf-8"),
         "assumptions.csv": assumptions.to_csv(index=False).encode("utf-8"),
         "lineage.json": lineage_json(lineage).encode("utf-8"),

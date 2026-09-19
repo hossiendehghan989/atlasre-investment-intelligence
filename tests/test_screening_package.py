@@ -14,6 +14,7 @@ def test_screening_package_contains_executive_sections_and_supporting_files():
     assert "review_required" not in report.lower()
     assert {
         "stress_cases.csv",
+        "annual_debt_schedule.csv",
         "monthly_development_model.csv",
         "assumptions.csv",
         "lineage.json",
@@ -29,6 +30,7 @@ def test_screening_package_zip_is_readable():
     with ZipFile(BytesIO(package)) as archive:
         names = set(archive.namelist())
     assert "investment_committee_report.md" in names
+    assert "annual_debt_schedule.csv" in names
     assert "monthly_development_model.csv" in names
     assert "lease_summary.csv" in names
     assert "excel_reconciliation.xlsx" in names
