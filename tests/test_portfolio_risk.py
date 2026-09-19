@@ -1,4 +1,5 @@
 import pandas as pd
+import pyarrow as pa
 import pytest
 
 from src.portfolio import portfolio_allocation, portfolio_risk_view
@@ -22,3 +23,16 @@ def test_portfolio_risk_view_handles_no_invested_capital():
     risk = portfolio_risk_view(allocation)
     assert risk["invested_capital"] == 0
     assert risk["concentration_hhi"] == 0
+
+
+def test_portfolio_allocation_with_unallocated_summary_is_arrow_compatible():
+    deals = pd.DataFrame([
+        {"asset": "A", "equity_required": 100, "risk_adjusted_score": 90, "levered_irr": .16, "minimum_dscr": 1.40},
+        {"asset": "B", "equity_required": 100, "risk_adjusted_score": 60, "levered_irr": .12, "minimum_dscr": 1.35},
+    ])
+
+    allocation = portfolio_allocation(deals, 500, max_single_asset_pct=1.0)
+
+    assert "UNALLOCATED" in allocation["asset"].tolist()
+    assert isinstance(allocation.index, pd.RangeIndex)
+    pa.Table.from_pandas(allocation)

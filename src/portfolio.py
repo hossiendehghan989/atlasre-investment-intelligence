@@ -99,7 +99,10 @@ def portfolio_allocation(deals: pd.DataFrame, available_equity: float, max_singl
                 "constraint_reason": "Available capital not allocated",
             }], index=["UNALLOCATED"]),
         ], ignore_index=False)
-    return output
+    # Streamlit serializes data frames through Arrow. Keep the display index
+    # homogeneous so an optional UNALLOCATED summary row cannot coerce it into
+    # a mixed integer/string object column during serialization.
+    return output.reset_index(drop=True)
 
 
 def portfolio_risk_view(allocation: pd.DataFrame, min_dscr: float = 1.25) -> dict[str, float]:
