@@ -12,7 +12,16 @@ def test_screening_package_contains_executive_sections_and_supporting_files():
     assert "Expected shortfall" in report
     assert "Model-run fingerprint" in report
     assert "review_required" not in report.lower()
-    assert {"stress_cases.csv", "monthly_development_model.csv", "assumptions.csv", "lineage.json", "risk_summary.json", "lease_summary.csv", "lease_monthly_rollup.csv"}.issubset(files)
+    assert {
+        "stress_cases.csv",
+        "monthly_development_model.csv",
+        "assumptions.csv",
+        "lineage.json",
+        "risk_summary.json",
+        "lease_summary.csv",
+        "lease_monthly_rollup.csv",
+        "excel_reconciliation.xlsx",
+    }.issubset(files)
 
 
 def test_screening_package_zip_is_readable():
@@ -22,6 +31,7 @@ def test_screening_package_zip_is_readable():
     assert "investment_committee_report.md" in names
     assert "monthly_development_model.csv" in names
     assert "lease_summary.csv" in names
+    assert "excel_reconciliation.xlsx" in names
 
 
 def test_verified_without_evidence_is_review_required_throughout_package():

@@ -10,7 +10,7 @@ from src.advanced_underwriting import monte_carlo_underwriting, risk_summary, st
 from src.atlasre import DealInputs, underwrite_deal
 from src.committee_analytics import investment_committee_summary
 from src.governance import default_lineage, lineage_json, model_run_fingerprint, versioned_assumptions
-from src.ic_workflow import DealCase, screen_case
+from src.ic_workflow import DealCase, ScreeningThresholds, screen_case
 from src.institutional import MonthlyDevelopmentInputs, monthly_development_model
 from src.lease import (
     LeaseUnderwritingInputs,
@@ -20,6 +20,7 @@ from src.lease import (
     lease_summary,
     underwrite_with_lease_roll,
 )
+from src.reconciliation import build_reconciliation_workbook
 
 MODEL_VERSION = "deterministic-core-v0.10"
 
@@ -67,6 +68,7 @@ def build_screening_package(
     simulations: int = 5000,
     lease_inputs: LeaseUnderwritingInputs | None = None,
     model_version: str = MODEL_VERSION,
+    hurdle_rate: float = 0.12,
 ) -> dict[str, bytes]:
     """Return report and supporting files as bytes without hidden filesystem state.
 
@@ -103,7 +105,7 @@ def build_screening_package(
         }
 
     case = DealCase(deal_id, "Screening case", case_deal, source_status, verified_by, source_reference)
-    screen = screen_case(case)
+    screen = screen_case(case, ScreeningThresholds(hurdle_rate=hurdle_rate))
     effective_source_status = screen["source_status"]
     source_gate_note = (
         "The case must not advance to approval while source status is `REVIEW REQUIRED` or while a critical economic flag remains unresolved."
@@ -112,7 +114,7 @@ def build_screening_package(
     )
     underwriting = underwrite_deal(case_deal)
     simulations_df = monte_carlo_underwriting(case_deal, simulations=simulations, seed=42)
-    risk = risk_summary(simulations_df)
+    risk = risk_summary(simulations_df, hurdle_rate=hurdle_rate)
     stress = stress_test(case_deal)
     monthly_development, _development_summary = monthly_development_model(
         MonthlyDevelopmentInputs(5_000_000, 12_000_000, 2_500_000)
@@ -135,7 +137,7 @@ def build_screening_package(
             "assumption_version": 1,
         })
     fingerprint = model_run_fingerprint(model_version, assumptions, lineage)
-    committee = investment_committee_summary(case_deal)
+    committee = investment_committee_summary(case_deal, hurdle_rate=hurdle_rate)
     flags = "\n".join(f"- **{flag['severity']}** — {flag['flag']}: {flag['evidence']}" for flag in screen["flags"])
     thesis = (
         "The case is suitable only for initial, downside-led screening. Its economic outputs remain conditional on "
@@ -227,6 +229,13 @@ The fingerprint hashes the model version, assumption snapshot, and lineage recor
         "assumptions.csv": assumptions.to_csv(index=False).encode("utf-8"),
         "lineage.json": lineage_json(lineage).encode("utf-8"),
         "risk_summary.json": json.dumps(risk, indent=2).encode("utf-8"),
+        "excel_reconciliation.xlsx": build_reconciliation_workbook(
+            case_deal,
+            hurdle_rate=hurdle_rate,
+            model_version=model_version,
+            source_status=effective_source_status,
+            deal_id=deal_id,
+        ),
     }
     files.update(lease_files)
     return files
@@ -241,9 +250,20 @@ def screening_package_zip(
     simulations: int = 5000,
     lease_inputs: LeaseUnderwritingInputs | None = None,
     model_version: str = MODEL_VERSION,
+    hurdle_rate: float = 0.12,
 ) -> bytes:
     """Return the complete screening package as a downloadable ZIP file."""
-    files = build_screening_package(deal, deal_id, source_status, verified_by, source_reference, simulations, lease_inputs, model_version)
+    files = build_screening_package(
+        deal,
+        deal_id,
+        source_status,
+        verified_by,
+        source_reference,
+        simulations,
+        lease_inputs,
+        model_version,
+        hurdle_rate,
+    )
     buffer = BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
         for name in sorted(files):
