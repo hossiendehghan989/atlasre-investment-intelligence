@@ -20,7 +20,7 @@ python -m pip install -r requirements.lock && streamlit run dashboard.py
 
 Open the local URL printed by Streamlit. Change an assumption, inspect the downside flags, select **Prepare review files**, and download the ZIP or formula-based Excel reconciliation workbook. Every bundled input and output remains **ILLUSTRATIVE**. The dashboard and CLI review package both use 5,000 seeded downside simulations.
 
-**Live demo:** Not deployed yet. Follow [DEPLOY.md](DEPLOY.md) to deploy the dashboard from GitHub.
+**Live demo:** [atlasre-screening-demo.streamlit.app](https://atlasre-screening-demo.streamlit.app/) — uses ILLUSTRATIVE data, has no authentication, is not for sensitive data, and the free app may take a short time to wake up if it has been idle.
 
 ## What the decision output looks like
 
