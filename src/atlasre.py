@@ -58,17 +58,34 @@ def underwrite_deal(deal: DealInputs) -> dict[str, float | list[float]]:
     unlevered_irr = _irr(unlevered_flows)
     discount_flows = sum(flow / (1 + deal.discount_rate) ** i for i, flow in enumerate(unlevered_flows))
     annual_debt_service = 0.0
+    remaining_debt = 0.0
+    debt_schedule = []
     if debt:
         r = deal.debt_rate / 12
         periods = deal.debt_amortization_years * 12
-        annual_debt_service = debt * (r * (1 + r) ** periods) / ((1 + r) ** periods - 1) * 12
-    levered_flows = [-equity] + [cash - annual_debt_service for cash in noi[:-1]] + [noi[-1] + exit_value - selling_cost - annual_debt_service - debt]
+        monthly_payment = debt * (r * (1 + r) ** periods) / ((1 + r) ** periods - 1)
+        annual_debt_service = monthly_payment * 12
+        balance = debt
+        for year in range(1, deal.hold_years + 1):
+            interest = 0.0
+            principal = 0.0
+            for _ in range(12):
+                interest += balance * r
+                principal += min(monthly_payment - balance * r, balance)
+                balance = max(0.0, balance - (monthly_payment - balance * r))
+            debt_schedule.append({"year": year, "interest": interest, "principal": principal, "ending_balance": balance})
+        remaining_debt = balance
+    dscr = [cash / annual_debt_service for cash in noi] if annual_debt_service else [float("inf")] * len(noi)
+    levered_flows = [-equity] + [cash - annual_debt_service for cash in noi[:-1]] + [noi[-1] + exit_value - selling_cost - annual_debt_service - remaining_debt]
     levered_irr = _irr(levered_flows)
     return {
         "entry_cap_rate": deal.annual_noi / deal.purchase_price,
         "equity_required": equity,
         "debt_amount": debt,
         "annual_debt_service": annual_debt_service,
+        "remaining_debt_at_exit": remaining_debt,
+        "minimum_dscr": float(min(dscr)),
+        "debt_schedule": debt_schedule,
         "exit_value": exit_value,
         "unlevered_irr": unlevered_irr,
         "levered_irr": levered_irr,

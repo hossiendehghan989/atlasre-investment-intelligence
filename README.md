@@ -110,3 +110,9 @@ The project does not present an attractive base case as a conclusion. It present
 ## Executive note
 
 [`INVESTMENT_COMMITTEE_MEMO.md`](INVESTMENT_COMMITTEE_MEMO.md) explains the business purpose and how the prototype could be extended inside a real investment organization. It is deliberately written as a concise investment-committee brief rather than a technical showcase.
+
+## Committee screening outputs
+
+The underwriting engine now amortizes debt monthly, reports the remaining balance at exit, and calculates minimum DSCR across the hold period. A committee summary applies explicit initial-screen flags for return below hurdle, thin debt coverage, and negative unlevered NPV. A break-even exit-cap solver shows the terminal capitalization rate required to meet the selected hurdle.
+
+The dashboard also includes a one-way exit-cap sensitivity table. This is a more useful committee artifact than a single base-case IRR because it makes the terminal-value dependency visible and gives reviewers a precise assumption to challenge.

@@ -5,6 +5,7 @@ import streamlit as st
 
 from src.atlasre import DealInputs, rank_markets, scenario_matrix, underwrite_deal
 from src.advanced_underwriting import DevelopmentInputs, development_feasibility, monte_carlo_underwriting, risk_summary, stress_test
+from src.committee_analytics import investment_committee_summary, sensitivity_table
 
 st.set_page_config(page_title="AtlasRE Investment Intelligence", page_icon="◆", layout="wide")
 st.title("AtlasRE Investment Intelligence")
@@ -22,19 +23,29 @@ with st.sidebar:
 
 deal = DealInputs(price, noi, hold, growth, exit_cap, 0.10, 0.03, 0.02, leverage)
 underwriting = underwrite_deal(deal)
+committee = investment_committee_summary(deal)
 
 underwriting_tab, risk_tab, development_tab, markets_tab = st.tabs(["Underwriting", "Risk & scenarios", "Development", "Markets"])
 with underwriting_tab:
     st.header("Investment committee underwriting")
-    cols = st.columns(5)
+    cols = st.columns(6)
     cols[0].metric("Entry cap", f"{underwriting['entry_cap_rate']:.2%}")
     cols[1].metric("Levered IRR", f"{underwriting['levered_irr']:.2%}")
     cols[2].metric("Unlevered IRR", f"{underwriting['unlevered_irr']:.2%}")
     cols[3].metric("Equity multiple", f"{underwriting['equity_multiple']:.2f}x")
     cols[4].metric("Exit value", f"${underwriting['exit_value']:,.0f}")
+    cols[5].metric("Minimum DSCR", f"{underwriting['minimum_dscr']:.2f}x")
+    if committee["decision_flag"] == "passes initial screen":
+        st.success(f"Initial screen: {committee['decision_flag']}")
+    else:
+        st.warning(f"Initial screen: {committee['decision_flag']}")
+    st.caption(f"Debt balance at exit: ${underwriting['remaining_debt_at_exit']:,.0f} · Break-even exit cap at hurdle: {committee['break_even_exit_cap']:.2%}")
     st.subheader("Growth / exit-cap sensitivity")
     matrix = scenario_matrix(deal)
     st.dataframe(matrix.style.format({"noi_growth": "{:.1%}", "exit_cap_rate": "{:.1%}", "levered_irr": "{:.1%}", "unlevered_irr": "{:.1%}", "exit_value": "${:,.0f}", "npv": "${:,.0f}"}), use_container_width=True, hide_index=True)
+    st.subheader("One-way sensitivity: exit cap rate")
+    sensitivity = sensitivity_table(deal, "exit_cap_rate", [0.05, 0.055, 0.06, 0.065, 0.07])
+    st.dataframe(sensitivity.style.format({"exit_cap_rate": "{:.1%}", "levered_irr": "{:.1%}", "unlevered_npv": "${:,.0f}", "minimum_dscr": "{:.2f}x", "exit_value": "${:,.0f}"}), use_container_width=True, hide_index=True)
 
 with risk_tab:
     st.header("Downside and probability-weighted review")
