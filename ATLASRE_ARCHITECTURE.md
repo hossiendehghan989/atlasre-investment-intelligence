@@ -86,3 +86,8 @@ The model treats periodicity as a first-class control. Monthly development cash 
 ## v0.6 control surface
 
 The reference implementation now treats invalid numerical inputs as model errors rather than silently clipped values. IRR root-finding is bracket-scanned, zero-rate debt is a supported limiting case, and debt schedule vectors are length- and finiteness-checked. Market scores require normalized finite factors and weights that sum to one. Audit verification is defensive against malformed events, lineage requires explicit input assumptions, and portfolio allocation is deterministic for repeated identical inputs.
+
+
+## v0.7 decision controls
+
+A model passing economic thresholds is not equivalent to an investable recommendation. The IC layer therefore treats source verification as a separate gate and reports governance flags alongside return and coverage flags. A case cannot pass the initial screen while its source package remains unverified. Risk review includes expected shortfall, not only percentile summaries, and every assumption snapshot plus lineage set can be hashed into a model-run fingerprint for reproducibility.

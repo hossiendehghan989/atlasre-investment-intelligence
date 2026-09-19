@@ -40,6 +40,8 @@ def test_correlated_monte_carlo_is_reproducible_and_exposes_risk_tails():
     assert first.equals(second)
     summary = risk_summary(first)
     assert summary["p05_irr"] <= summary["median_irr"] <= summary["p95_irr"]
+    assert summary["expected_shortfall_irr_10"] <= summary["p10_irr"]
+    assert summary["expected_shortfall_npv_10"] <= summary["median_npv"]
     assert 0 <= summary["probability_dscr_below_125"] <= 1
 
 
@@ -49,4 +51,3 @@ def test_stress_test_contains_rate_and_combined_downside_cases():
     base = table.loc[table["case"] == "Base case", "levered_irr"].iloc[0]
     downside = table.loc[table["case"] == "Combined downside", "levered_irr"].iloc[0]
     assert downside < base
-

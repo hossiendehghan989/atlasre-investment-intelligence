@@ -160,3 +160,10 @@ The underwriting core now validates finite inputs, transaction-cost bounds, grow
 Governance records now have typed lineage and audit contracts. Malformed audit events return a failed verification rather than raising an opaque key error; lineage records require explicit inputs and a positive assumption version. The adversarial suite covers zero-rate debt, invalid assumptions, malformed audit events, verified assumption snapshots, deterministic allocation, and market-factor validation.
 
 The repository currently passes **27 tests**. It remains a deterministic analytical prototype: live data ingestion, persistent approvals, lease-level modeling, and production storage are intentionally not claimed.
+
+
+## Decision and reproducibility hardening (v0.7)
+
+IC screening is now source-aware: a case marked `REVIEW REQUIRED` cannot pass automatically even if its modeled returns clear the economic thresholds. Flags are classified as `CRITICAL`, `HIGH`, `GOVERNANCE`, or `INFO`, and the decision state is explicitly one of `PASSES INITIAL SCREEN`, `REVIEW REQUIRED`, or `REJECT / REWORK`. Side-by-side comparisons expose critical and review-flag counts rather than only a free-text summary.
+
+Risk summaries now include expected shortfall for the worst 10% of IRR and NPV outcomes, in addition to percentile tails and DSCR-breach probability. Governance includes a deterministic model-run fingerprint over the model version, assumption snapshot, and lineage records, creating a reproducibility handle without pretending to provide persistent storage.

@@ -110,4 +110,13 @@ def lineage_json(records: list[LineageRecord]) -> str:
     return json.dumps(records, indent=2, default=str)
 
 
-__all__ = ["Assumption", "AuditEvent", "LineageRecord", "versioned_assumptions", "assumption_register", "lineage_record", "audit_event", "verify_audit_chain", "ic_workflow", "default_lineage", "lineage_json"]
+def model_run_fingerprint(model_version: str, assumptions: pd.DataFrame, lineage: list[LineageRecord]) -> str:
+    """Hash model version, assumption snapshot, and lineage into a reproducibility ID."""
+    if not model_version or "id" not in assumptions.columns and "assumption_id" not in assumptions.columns:
+        raise ValueError("model_version and assumption IDs are required")
+    records = assumptions.sort_values(by=["id"] if "id" in assumptions.columns else ["assumption_id"]).to_dict(orient="records")
+    payload = {"model_version": model_version, "assumptions": records, "lineage": lineage}
+    return hashlib.sha256(json.dumps(payload, sort_keys=True, default=str).encode("utf-8")).hexdigest()
+
+
+__all__ = ["Assumption", "AuditEvent", "LineageRecord", "versioned_assumptions", "assumption_register", "lineage_record", "audit_event", "verify_audit_chain", "ic_workflow", "default_lineage", "lineage_json", "model_run_fingerprint"]

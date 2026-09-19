@@ -82,7 +82,9 @@ def risk_summary(simulations: pd.DataFrame, hurdle_rate: float = 0.12) -> dict[s
     dscr = simulations["minimum_dscr"].replace([np.inf, -np.inf], np.nan).dropna()
     if irr.empty or npv.empty or dscr.empty:
         raise ValueError("simulations contain no finite risk observations")
-    return {"p05_irr": float(irr.quantile(0.05)), "p10_irr": float(irr.quantile(0.10)), "median_irr": float(irr.median()), "p90_irr": float(irr.quantile(0.90)), "p95_irr": float(irr.quantile(0.95)), "probability_irr_below_hurdle": float((irr < hurdle_rate).mean()), "probability_negative_npv": float((npv < 0).mean()), "median_npv": float(npv.median()), "probability_dscr_below_125": float((dscr < 1.25).mean())}
+    irr_tail = irr[irr <= irr.quantile(0.10)]
+    npv_tail = npv[npv <= npv.quantile(0.10)]
+    return {"p05_irr": float(irr.quantile(0.05)), "p10_irr": float(irr.quantile(0.10)), "median_irr": float(irr.median()), "p90_irr": float(irr.quantile(0.90)), "p95_irr": float(irr.quantile(0.95)), "expected_shortfall_irr_10": float(irr_tail.mean()), "expected_shortfall_npv_10": float(npv_tail.mean()), "worst_irr": float(irr.min()), "probability_irr_below_hurdle": float((irr < hurdle_rate).mean()), "probability_negative_npv": float((npv < 0).mean()), "median_npv": float(npv.median()), "probability_dscr_below_125": float((dscr < 1.25).mean())}
 
 
 def stress_test(deal: DealInputs) -> pd.DataFrame:

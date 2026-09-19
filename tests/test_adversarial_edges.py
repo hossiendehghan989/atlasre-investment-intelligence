@@ -3,7 +3,7 @@ import pytest
 
 from src.atlasre import DealInputs, market_score, underwrite_deal
 from src.debt import DebtTerms, monthly_debt_schedule
-from src.governance import audit_event, lineage_record, verify_audit_chain, versioned_assumptions
+from src.governance import audit_event, default_lineage, lineage_record, model_run_fingerprint, verify_audit_chain, versioned_assumptions
 from src.portfolio import portfolio_allocation
 
 
@@ -28,6 +28,7 @@ def test_governance_rejects_malformed_audit_and_tracks_version():
     register = versioned_assumptions({"exit_cap": (.06, "%")}, deal_id="A", version=3, verified_by="reviewer")
     assert register.iloc[0]["assumption_id"] == "A:exit_cap:v3"
     assert register.iloc[0]["status"] == "VERIFIED"
+    assert len(model_run_fingerprint("v1", register.rename(columns={"assumption_id": "id"}), default_lineage())) == 64
 
 
 def test_lineage_requires_inputs_and_portfolio_is_repeatable():

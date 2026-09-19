@@ -7,7 +7,7 @@ from src.advanced_underwriting import DevelopmentInputs, monte_carlo_underwritin
 from src.atlasre import DealInputs, rank_markets, scenario_matrix, underwrite_deal
 from src.committee_analytics import investment_committee_summary, sensitivity_table
 from src.debt import DebtTerms, monthly_debt_schedule, size_debt_from_constraints
-from src.governance import assumption_register, default_lineage, ic_workflow, lineage_json
+from src.governance import assumption_register, default_lineage, ic_workflow, lineage_json, model_run_fingerprint
 from src.ic_workflow import DealCase, compare_deals, generate_ic_memo
 from src.institutional import MonthlyDevelopmentInputs, WaterfallTier, monthly_development_model, multi_tier_waterfall, size_debt
 from src.portfolio import portfolio_allocation, portfolio_snapshot
@@ -74,6 +74,7 @@ with risk_tab:
     risk_cols[2].metric("P95 IRR", f"{summary['p95_irr']:.1%}")
     risk_cols[3].metric("Below hurdle", f"{summary['probability_irr_below_hurdle']:.1%}")
     risk_cols[4].metric("DSCR < 1.25x", f"{summary['probability_dscr_below_125']:.1%}")
+    st.caption(f"Expected shortfall (worst 10% IRR): {summary['expected_shortfall_irr_10']:.1%} · Expected shortfall (worst 10% NPV): ${summary['expected_shortfall_npv_10']:,.0f} · Worst IRR: {summary['worst_irr']:.1%}")
     st.bar_chart(simulations["levered_irr"].clip(-1, 1).round(3).value_counts().sort_index())
 
 with development_tab:
@@ -135,6 +136,7 @@ with governance_tab:
     st.markdown("**Output lineage**")
     st.json(default_lineage())
     st.download_button("Download lineage JSON", lineage_json(default_lineage()), file_name="atlasre-lineage.json", mime="application/json")
+    st.caption(f"Model-run fingerprint: `{model_run_fingerprint('deterministic-core-v1', assumptions, default_lineage())[:16]}`")
     current_case = DealCase("ATLAS-001", "Core-plus screening case", base_deal)
     comparison_case = DealCase("ATLAS-002", "Higher-growth challenge case", DealInputs(price * 1.05, noi * 1.08, hold, growth + 0.01, exit_cap - 0.005, hurdle - 0.02, 0.03, 0.02, leverage))
     st.markdown("**Side-by-side deal comparison**")
