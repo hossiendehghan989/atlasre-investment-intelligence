@@ -1,8 +1,31 @@
 # Changelog
 
-## v0.10 — IC hardening, canonical reproducibility, and lease bridge
+## review-fixes — correctness, testing, and repository controls
 
-This release advances AtlasRE from an advanced analytical prototype toward a more defensible Investment Committee screening artifact. It preserves the deterministic financial core and the original simplified annual-NOI path while making downside, governance, and reproducibility materially more visible.
+This branch contains the local work already present before the review, followed by the review fixes listed below. The branch is based on the local `review-fixes` state and targets the remote `main` branch.
+
+### Review fixes in this branch
+
+- Removed the second risk multiplier from `market_score`; `rank_markets` now receives one consistent composite score.
+- Made year-one NOI equal to the supplied input and applied growth from year two onward.
+- Changed equity multiple to total positive distributions divided by total negative equity cash flows, including interim contributions.
+- Labeled `portfolio_exposure` as a naive score-weighted screen and pointed constrained use cases to `src/portfolio.py`.
+- Added independent `numpy-financial` IRR, direct-discount NPV, and closed-form debt schedule checks.
+- Added Ruff configuration, safe lint fixes, and readability refactors for model construction.
+- Added MIT license, test-only requirements, GitHub Actions CI, screenshots, and the illustrative case study.
+- Added an explicit modeling-conventions and simplifications inventory to the architecture document.
+
+### Validation at the time of this entry
+
+The local suite contains 51 passing tests. Ruff passes with `ruff check .`. The dashboard was run headlessly and three screenshots were captured under `docs/images/`.
+
+### Pre-existing local work
+
+The branch also contains earlier local changes for the lease foundation, source-aware governance, IC package generation, reproducibility fingerprints, and dashboard copy. Those commits are retained unchanged and are listed in `docs/baseline_audit.md`.
+
+## v0.10 — IC controls, reproducibility, and lease bridge
+
+This release preserved the deterministic financial core and added source-aware screening, lease support, reproducibility records, and downside reporting.
 
 ### Added
 
@@ -23,7 +46,7 @@ This release advances AtlasRE from an advanced analytical prototype toward a mor
 
 ### Validation
 
-- 45 tests passing.
+- 45 tests passing at the time of the release.
 - Python compilation passing.
 - `git diff --check` passing.
 - IC screening package generation passing.
@@ -33,9 +56,9 @@ This release advances AtlasRE from an advanced analytical prototype toward a mor
 
 AtlasRE remains a deterministic analytical prototype. It is not production-ready, an automated approval system, or investment advice. Persistent governance, live and source-controlled data, complete lease economics, full debt stacks, independent model validation, and multi-period portfolio optimization remain future work.
 
-## v0.9 — Executive and lease-level elevation
+## v0.9 — Lease-level support and screening package
 
-This release moved AtlasRE from an advanced analytical prototype toward a more executive-ready Investment Committee decision-support artifact without changing the Streamlit stack or weakening the deterministic financial core.
+This release added a modular lease foundation and downloadable screening artifacts without changing the Streamlit stack.
 
 ### Added
 

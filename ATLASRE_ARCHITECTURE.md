@@ -80,13 +80,34 @@ Streamlit dashboard + Markdown / CSV / JSON artifacts
 | Portfolio | Concentration cap, DSCR gate, capital rationing, HHI, and exposure view | Multi-period optimizer, capital calls, liquidity, covariance, and fund obligations |
 | Data | Illustrative CSV and explicit user inputs | Source connectors, document extraction, citations, timestamps, and confidence review |
 
+## Modeling conventions and simplifications
+
+The following choices are part of the current model contract. They are not hidden assumptions and should be reconsidered before using the repository for a live transaction.
+
+| Area | Current convention or simplification |
+| --- | --- |
+| Operating income | Acquisition underwriting uses one annual NOI input. The input is year-one NOI; growth begins in year two. There is no monthly operating statement in the acquisition engine. |
+| Property taxes | Property tax is not modeled as a separate line. Any impact must already be reflected in the supplied NOI. |
+| Capital reserves | There is no capex reserve in the acquisition engine. Major repairs and replacement reserves are not forecast. |
+| Lease economics | The optional lease foundation models contract rent, escalation, vacancy, rollover assumptions, operating expenses, and NOI roll-up. It does not model TI/LC, recoveries, downtime detail, capex, renewal probability, or tenant-credit evidence. |
+| Transaction costs | Acquisition and selling costs are percentage assumptions applied to purchase price and exit value. Legal, financing, diligence, tax, and other fees are not separately modeled unless represented by an input. |
+| Exit | Exit value is final-period NOI divided by an exit cap rate. There is no disposition timing uncertainty, buyer-side financing analysis, or exit-price distribution calibrated to market data. |
+| Debt | The acquisition model contains one amortizing loan with monthly amortization. There is no mezzanine, preferred equity, construction-to-permanent facility, hedge, covenant package, refinance, extension, or default model. |
+| Development | The development module uses evenly distributed construction draws, a contingency percentage, capitalized interest, a simple NOI ramp, and a single terminal sale. It is not a contractor cost-to-complete model. |
+| Taxes and accounting | Income tax, property tax, transfer tax, depreciation, accounting treatment, FX, and cash-tax timing are outside the model. |
+| Waterfall | Waterfall logic is a deterministic distribution schedule, not legal advice. It omits negotiated catch-ups, clawbacks, tax distributions, escrow, and document-specific definitions. |
+| Risk | Simulation shocks are seeded and reproducible. They are not empirical probability estimates and are not calibrated to a historical dataset. |
+| Portfolio | `portfolio_exposure` is a documented naive score-weighted screen. The constrained allocator in `src/portfolio.py` is the intended path when DSCR, concentration, and eligibility constraints are required. |
+| Governance | Source status, lineage, and fingerprints are calculated in-process. There is no persistent server-side approval ledger, role system, retention policy, or immutable event store. |
+| Data | The bundled market CSV and dashboard defaults are illustrative. The model does not ingest or verify PDFs, spreadsheets, leases, appraisals, bank terms, or third-party sources. |
+
 ## Current gaps versus target
 
-The baseline audit identified four gaps between the existing reference-grade core and the requested executive-ready target. The `v0.10` elevation closes the presentation gap by putting the **model-run fingerprint** and tail-risk measures in the primary decision frame. It closes the lease-bridge gap by making rent-roll-derived annual NOI an explicit optional route into the existing acquisition engine. It closes the reproducibility gap by canonicalizing assumption and lineage ordering before fingerprinting. It also aligns public version references and dashboard copy.
+The baseline audit identified gaps between the remote baseline and the current local branch. The local branch now includes the lease bridge, source-aware screening, canonical fingerprints, downside metrics, and a shorter internal-review dashboard. These additions do not remove the simplifications listed above.
 
 The remaining gaps are appropriately material rather than cosmetic: persistent approvals, source-controlled ingestion, complete commercial lease economics, validated probability calibration, a full debt stack, and multi-period portfolio constraints. The simpler annual-NOI path remains available and untouched. The lease route stays opt-in, traceable, and source-gated.
 
-## Six-to-ten-week highest-ROI roadmap
+## Six-to-ten-week implementation roadmap
 
 | Timing | Outcome | Control objective |
 | --- | --- | --- |
