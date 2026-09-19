@@ -151,3 +151,12 @@ The system still does not claim live data ingestion, OCR, semantic search, AI ag
 The financial core now includes a multi-tier LP/GP waterfall with return-of-capital, preferred return, ordered hurdles, tier-specific promote, and distribution checks. The monthly development model explicitly records lender fees, peak debt, capitalized interest, construction/stabilization timing, and annualizes monthly IRRs before reporting them. The uncertainty engine uses deterministic correlated shocks across growth, exit cap, purchase price, and debt rate, and reports P05/P10/median/P90/P95 IRR, negative-NPV probability, hurdle failure, and DSCR breach probability. Stress cases now include a rate shock and expose minimum DSCR.
 
 These upgrades are deliberately deterministic. They do not pretend to be a live data platform, a lease-level model, or an AI system. All assumptions remain explicit and challengeable.
+
+
+## Numerical and governance hardening (v0.6)
+
+The underwriting core now validates finite inputs, transaction-cost bounds, growth limits, debt terms, and normalized market factors. IRR solving uses a deterministic scanned bracket and handles negative/high-return cases without noisy overflow warnings. Zero-rate amortization is supported explicitly. Debt schedules reject malformed draws and NOI vectors, and portfolio allocation rejects non-finite inputs while preserving deterministic ordering.
+
+Governance records now have typed lineage and audit contracts. Malformed audit events return a failed verification rather than raising an opaque key error; lineage records require explicit inputs and a positive assumption version. The adversarial suite covers zero-rate debt, invalid assumptions, malformed audit events, verified assumption snapshots, deterministic allocation, and market-factor validation.
+
+The repository currently passes **27 tests**. It remains a deterministic analytical prototype: live data ingestion, persistent approvals, lease-level modeling, and production storage are intentionally not claimed.

@@ -81,3 +81,8 @@ These are working calculations and outputs, not simulated agents. AI orchestrati
 ## Quant-control decisions in v0.5
 
 The model treats periodicity as a first-class control. Monthly development cash flows are modeled at monthly frequency, loan interest accrues on post-draw balances, and reported IRRs are annualized from monthly IRRs. Debt sizing uses the weakest modeled NOI period for DSCR capacity and reports the binding LTV or DSCR constraint. Waterfall distributions are checked against total distributable cash, and promote is applied only to profit above the applicable hurdle. Correlated Monte Carlo shocks are seeded for reproducibility and expose tail and covenant-breach statistics rather than only a mean case.
+
+
+## v0.6 control surface
+
+The reference implementation now treats invalid numerical inputs as model errors rather than silently clipped values. IRR root-finding is bracket-scanned, zero-rate debt is a supported limiting case, and debt schedule vectors are length- and finiteness-checked. Market scores require normalized finite factors and weights that sum to one. Audit verification is defensive against malformed events, lineage requires explicit input assumptions, and portfolio allocation is deterministic for repeated identical inputs.

@@ -1,6 +1,8 @@
 """Portfolio-level decision support with explicit, enforceable constraints."""
 from __future__ import annotations
 
+import math
+
 import pandas as pd
 
 
@@ -8,6 +10,10 @@ def allocate_capital(deals: pd.DataFrame, available_equity: float, max_single_as
     """Allocate capital by score while re-allocating around binding concentration caps."""
     if available_equity <= 0 or not 0 < max_single_asset_pct <= 1 or min_dscr <= 0:
         raise ValueError("capital, concentration, and DSCR constraints must be valid")
+    if any(column not in deals.columns for column in ("equity_required", "minimum_dscr", "risk_adjusted_score")):
+        raise ValueError("deals must include equity_required, minimum_dscr, and risk_adjusted_score")
+    if any(not math.isfinite(float(value)) for column in ("equity_required", "minimum_dscr", "risk_adjusted_score") for value in deals[column]):
+        raise ValueError("portfolio inputs must be finite")
     eligible = (deals["equity_required"] <= available_equity) & (deals["minimum_dscr"] >= min_dscr) & (deals["risk_adjusted_score"] > 0)
     scores = deals["risk_adjusted_score"].where(eligible, 0.0).astype(float)
     allocation = pd.Series(0.0, index=deals.index)
@@ -15,7 +21,7 @@ def allocate_capital(deals: pd.DataFrame, available_equity: float, max_single_as
     active = set(scores[scores > 0].index)
     cap = available_equity * max_single_asset_pct
     while active and remaining > 1e-9:
-        active_scores = scores.loc[list(active)]
+        active_scores = scores.loc[sorted(active, key=str)]
         total_score = float(active_scores.sum())
         if total_score <= 0:
             break
@@ -25,7 +31,7 @@ def allocate_capital(deals: pd.DataFrame, available_equity: float, max_single_as
             allocation.loc[proposed.index] += proposed
             remaining = 0.0
             break
-        for idx in capped.index:
+        for idx in sorted(capped.index, key=str):
             allocation.loc[idx] += cap
             remaining -= cap
             active.remove(idx)

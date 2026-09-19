@@ -1,7 +1,8 @@
-"""AtlasRE: transparent real-estate underwriting and investment intelligence."""
+"""Transparent real-estate underwriting and market intelligence primitives."""
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import isfinite
 from typing import Iterable
 
 import numpy as np
@@ -24,29 +25,57 @@ class DealInputs:
     debt_amortization_years: int = 20
 
 
+def _finite(value: float, name: str) -> None:
+    if not isfinite(float(value)):
+        raise ValueError(f"{name} must be finite")
+
+
 def validate_deal(deal: DealInputs) -> None:
+    for name in ("purchase_price", "annual_noi", "annual_noi_growth", "exit_cap_rate", "discount_rate", "acquisition_cost_pct", "selling_cost_pct", "leverage", "debt_rate"):
+        _finite(getattr(deal, name), name)
     if deal.purchase_price <= 0 or deal.annual_noi <= 0:
         raise ValueError("purchase_price and annual_noi must be positive")
-    if not 0 <= deal.leverage < 1:
-        raise ValueError("leverage must be between 0 and 1")
-    if deal.hold_years < 1 or deal.exit_cap_rate <= 0 or deal.discount_rate <= 0:
-        raise ValueError("hold_years, exit_cap_rate, and discount_rate must be positive")
+    if deal.hold_years < 1 or deal.debt_amortization_years < 1:
+        raise ValueError("hold_years and debt_amortization_years must be positive")
+    if deal.annual_noi_growth <= -1 or deal.exit_cap_rate <= 0 or deal.discount_rate < 0:
+        raise ValueError("growth must be above -100%; exit cap must be positive; discount rate cannot be negative")
+    if not 0 <= deal.acquisition_cost_pct <= 1 or not 0 <= deal.selling_cost_pct <= 1:
+        raise ValueError("transaction cost percentages must be between 0 and 1")
+    if not 0 <= deal.leverage < 1 or deal.debt_rate < 0:
+        raise ValueError("leverage must be in [0, 1) and debt rate cannot be negative")
+
+
+def _npv(rate: float, cash_flows: np.ndarray) -> float:
+    if rate <= -1:
+        return float("nan")
+    with np.errstate(over="ignore", divide="ignore", invalid="ignore"):
+        discount_factors = np.power(1 + rate, np.arange(cash_flows.size, dtype=float))
+        discounted = np.divide(cash_flows, discount_factors, out=np.zeros_like(cash_flows), where=np.isfinite(discount_factors) & (discount_factors != 0))
+    return float(np.sum(discounted))
 
 
 def _irr(cash_flows: Iterable[float]) -> float:
+    """Return the first economically reachable IRR, or NaN when none exists.
+
+    A scanned bracket is used instead of assuming a root between -99% and 1,000%.
+    This makes negative-return and high-return cases explicit while remaining
+    deterministic for conventional real-estate cash-flow streams.
+    """
     flows = np.asarray(list(cash_flows), dtype=float)
-    if not (np.any(flows > 0) and np.any(flows < 0)):
+    if flows.size < 2 or not np.all(np.isfinite(flows)) or not (np.any(flows > 0) and np.any(flows < 0)):
         return float("nan")
-    def npv(rate: float) -> float:
-        return float(sum(value / (1 + rate) ** i for i, value in enumerate(flows)))
-    try:
-        return float(brentq(npv, -0.99, 10.0))
-    except ValueError:
-        return float("nan")
+    rates = np.concatenate([np.array([-0.999999, -0.99, -0.90, -0.50, -0.10, 0.0]), np.logspace(-4, 3, 500)])
+    values = np.array([_npv(float(rate), flows) for rate in rates])
+    for left, right, left_value, right_value in zip(rates[:-1], rates[1:], values[:-1], values[1:]):
+        if left_value == 0:
+            return float(left)
+        if np.isfinite(left_value) and np.isfinite(right_value) and left_value * right_value < 0:
+            return float(brentq(lambda rate: _npv(rate, flows), float(left), float(right)))
+    return float("nan")
 
 
 def underwrite_deal(deal: DealInputs) -> dict[str, float | list[float]]:
-    """Produce unlevered and levered underwriting outputs."""
+    """Produce auditable annual unlevered and levered underwriting outputs."""
     validate_deal(deal)
     acquisition = deal.purchase_price * (1 + deal.acquisition_cost_pct)
     debt = deal.purchase_price * deal.leverage
@@ -56,63 +85,55 @@ def underwrite_deal(deal: DealInputs) -> dict[str, float | list[float]]:
     selling_cost = exit_value * deal.selling_cost_pct
     unlevered_flows = [-acquisition] + noi[:-1] + [noi[-1] + exit_value - selling_cost]
     unlevered_irr = _irr(unlevered_flows)
-    discount_flows = sum(flow / (1 + deal.discount_rate) ** i for i, flow in enumerate(unlevered_flows))
+    discount_flows = _npv(deal.discount_rate, np.asarray(unlevered_flows, dtype=float))
     annual_debt_service = 0.0
     remaining_debt = 0.0
-    debt_schedule = []
-    if debt:
+    debt_schedule: list[dict[str, float | int]] = []
+    if debt > 0:
         r = deal.debt_rate / 12
         periods = deal.debt_amortization_years * 12
-        monthly_payment = debt * (r * (1 + r) ** periods) / ((1 + r) ** periods - 1)
+        monthly_payment = debt / periods if r == 0 else debt * (r * (1 + r) ** periods) / ((1 + r) ** periods - 1)
         annual_debt_service = monthly_payment * 12
         balance = debt
         for year in range(1, deal.hold_years + 1):
             interest = 0.0
             principal = 0.0
             for _ in range(12):
-                interest += balance * r
-                principal += min(monthly_payment - balance * r, balance)
-                balance = max(0.0, balance - (monthly_payment - balance * r))
+                monthly_interest = balance * r
+                scheduled_principal = min(max(monthly_payment - monthly_interest, 0.0), balance)
+                interest += monthly_interest
+                principal += scheduled_principal
+                balance = max(0.0, balance - scheduled_principal)
             debt_schedule.append({"year": year, "interest": interest, "principal": principal, "ending_balance": balance})
         remaining_debt = balance
     dscr = [cash / annual_debt_service for cash in noi] if annual_debt_service else [float("inf")] * len(noi)
     levered_flows = [-equity] + [cash - annual_debt_service for cash in noi[:-1]] + [noi[-1] + exit_value - selling_cost - annual_debt_service - remaining_debt]
-    levered_irr = _irr(levered_flows)
-    return {
-        "entry_cap_rate": deal.annual_noi / deal.purchase_price,
-        "equity_required": equity,
-        "debt_amount": debt,
-        "annual_debt_service": annual_debt_service,
-        "remaining_debt_at_exit": remaining_debt,
-        "minimum_dscr": float(min(dscr)),
-        "debt_schedule": debt_schedule,
-        "exit_value": exit_value,
-        "unlevered_irr": unlevered_irr,
-        "levered_irr": levered_irr,
-        "unlevered_npv": float(discount_flows),
-        "equity_multiple": float(sum(max(flow, 0) for flow in levered_flows) / abs(levered_flows[0])),
-        "cash_flows": levered_flows,
-    }
+    return {"entry_cap_rate": deal.annual_noi / deal.purchase_price, "equity_required": equity, "debt_amount": debt, "annual_debt_service": annual_debt_service, "remaining_debt_at_exit": remaining_debt, "minimum_dscr": float(min(dscr)), "debt_schedule": debt_schedule, "exit_value": exit_value, "unlevered_irr": unlevered_irr, "levered_irr": _irr(levered_flows), "unlevered_npv": discount_flows, "equity_multiple": float(sum(max(flow, 0) for flow in levered_flows) / equity), "cash_flows": levered_flows}
 
 
 def scenario_matrix(base: DealInputs, growth_rates=(0.0, 0.03, 0.06), exit_caps=(0.05, 0.06, 0.08)) -> pd.DataFrame:
-    """Evaluate downside, base, and upside combinations."""
+    if not growth_rates or not exit_caps:
+        raise ValueError("scenario grids cannot be empty")
     rows = []
     for growth in growth_rates:
         for exit_cap in exit_caps:
-            deal = DealInputs(**{**base.__dict__, "annual_noi_growth": growth, "exit_cap_rate": exit_cap})
+            deal = DealInputs(**{**base.__dict__, "annual_noi_growth": float(growth), "exit_cap_rate": float(exit_cap)})
             result = underwrite_deal(deal)
             rows.append({"noi_growth": growth, "exit_cap_rate": exit_cap, "levered_irr": result["levered_irr"], "unlevered_irr": result["unlevered_irr"], "exit_value": result["exit_value"], "npv": result["unlevered_npv"]})
     return pd.DataFrame(rows)
 
 
 def market_score(market: dict[str, float], weights: dict[str, float] | None = None) -> dict[str, float]:
-    """Score a market using normalized growth, liquidity, yield, and risk inputs."""
     weights = weights or {"population_growth": 0.25, "employment_growth": 0.20, "rent_growth": 0.25, "liquidity": 0.15, "risk": 0.15}
-    positive = ["population_growth", "employment_growth", "rent_growth", "liquidity"]
-    score = sum(market.get(key, 0.0) * weight for key, weight in weights.items() if key != "risk")
-    score += (1 - market.get("risk", 0.5)) * weights.get("risk", 0.15)
-    return {"score_0_100": float(np.clip(score * 100, 0, 100)), "risk_adjusted_score": float(np.clip(score * (1 - market.get("risk", 0.5)) * 100, 0, 100))}
+    required = {"population_growth", "employment_growth", "rent_growth", "liquidity", "risk"}
+    if not required.issubset(market) or any(not isfinite(float(market[key])) for key in required):
+        raise ValueError(f"market must include finite values for {sorted(required)}")
+    if any(weight < 0 for weight in weights.values()) or not np.isclose(sum(weights.values()), 1.0):
+        raise ValueError("market weights must be non-negative and sum to 1")
+    if any(not 0 <= market[key] <= 1 for key in required):
+        raise ValueError("market factors must be normalized to [0, 1]")
+    score = sum(market[key] * weight for key, weight in weights.items() if key != "risk") + (1 - market["risk"]) * weights["risk"]
+    return {"score_0_100": float(np.clip(score * 100, 0, 100)), "risk_adjusted_score": float(np.clip(score * (1 - market["risk"]) * 100, 0, 100))}
 
 
 def rank_markets(markets: pd.DataFrame) -> pd.DataFrame:
@@ -120,20 +141,17 @@ def rank_markets(markets: pd.DataFrame) -> pd.DataFrame:
     missing = required.difference(markets.columns)
     if missing:
         raise ValueError(f"Missing market columns: {sorted(missing)}")
-    rows = []
-    for _, row in markets.iterrows():
-        rows.append({"market": row["market"], **market_score(row.to_dict())})
-    return pd.DataFrame(rows).sort_values("risk_adjusted_score", ascending=False).reset_index(drop=True)
+    rows = [{"market": row["market"], **market_score(row.to_dict())} for _, row in markets.iterrows()]
+    return pd.DataFrame(rows).sort_values(["risk_adjusted_score", "market"], ascending=[False, True]).reset_index(drop=True)
 
 
 def portfolio_exposure(deals: pd.DataFrame, capital: float) -> pd.DataFrame:
-    """Allocate capital proportionally to risk-adjusted opportunity scores."""
     required = {"asset", "equity_required", "risk_adjusted_score"}
-    if not required.issubset(deals.columns):
-        raise ValueError(f"deals must include {sorted(required)}")
+    if capital <= 0 or not required.issubset(deals.columns):
+        raise ValueError(f"capital must be positive and deals must include {sorted(required)}")
     data = deals.copy()
     data["eligible"] = (data["equity_required"] <= capital).astype(int)
     weights = data["risk_adjusted_score"].clip(lower=0) * data["eligible"]
-    data["allocation_weight"] = weights / weights.sum() if weights.sum() else 0
+    data["allocation_weight"] = weights / weights.sum() if weights.sum() else 0.0
     data["recommended_allocation"] = data["allocation_weight"] * capital
     return data

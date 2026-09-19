@@ -57,7 +57,9 @@ def monte_carlo_underwriting(deal: DealInputs, simulations: int = 5000, seed: in
         raise ValueError("simulations must be positive and correlation must be between -1 and 1")
     rng = np.random.default_rng(seed)
     cov = np.array([[1.0, correlation, 0.15, 0.0], [correlation, 1.0, -0.10, 0.0], [0.15, -0.10, 1.0, 0.20], [0.0, 0.0, 0.20, 1.0]])
-    shocks = rng.multivariate_normal(np.zeros(4), cov, simulations)
+    if np.linalg.eigvalsh(cov).min() < -1e-10:
+        raise ValueError("shock covariance matrix must be positive semi-definite")
+    shocks = rng.multivariate_normal(np.zeros(4), cov, simulations, check_valid="raise")
     growth = deal.annual_noi_growth + shocks[:, 0] * 0.02
     exit_caps = np.clip(deal.exit_cap_rate + shocks[:, 1] * 0.008, 0.025, 0.20)
     prices = deal.purchase_price * np.exp(shocks[:, 2] * 0.03)
@@ -78,6 +80,8 @@ def risk_summary(simulations: pd.DataFrame, hurdle_rate: float = 0.12) -> dict[s
     irr = simulations["levered_irr"].replace([np.inf, -np.inf], np.nan).dropna()
     npv = simulations["unlevered_npv"].replace([np.inf, -np.inf], np.nan).dropna()
     dscr = simulations["minimum_dscr"].replace([np.inf, -np.inf], np.nan).dropna()
+    if irr.empty or npv.empty or dscr.empty:
+        raise ValueError("simulations contain no finite risk observations")
     return {"p05_irr": float(irr.quantile(0.05)), "p10_irr": float(irr.quantile(0.10)), "median_irr": float(irr.median()), "p90_irr": float(irr.quantile(0.90)), "p95_irr": float(irr.quantile(0.95)), "probability_irr_below_hurdle": float((irr < hurdle_rate).mean()), "probability_negative_npv": float((npv < 0).mean()), "median_npv": float(npv.median()), "probability_dscr_below_125": float((dscr < 1.25).mean())}
 
 
