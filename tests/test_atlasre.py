@@ -1,0 +1,37 @@
+import pandas as pd
+import pytest
+
+from src.atlasre import DealInputs, market_score, portfolio_exposure, rank_markets, scenario_matrix, underwrite_deal
+
+
+def test_underwriting_has_consistent_cash_flow_outputs():
+    deal = DealInputs(10_000_000, 650_000, leverage=0.5)
+    result = underwrite_deal(deal)
+    assert result["entry_cap_rate"] == pytest.approx(0.065)
+    assert len(result["cash_flows"]) == 6
+    assert result["equity_multiple"] > 1
+
+
+def test_scenario_matrix_changes_exit_value():
+    matrix = scenario_matrix(DealInputs(10_000_000, 650_000))
+    assert len(matrix) == 9
+    assert matrix["exit_value"].max() > matrix["exit_value"].min()
+
+
+def test_market_ranking_penalizes_risk():
+    markets = pd.DataFrame([
+        {"market": "A", "population_growth": .8, "employment_growth": .8, "rent_growth": .8, "liquidity": .8, "risk": .8},
+        {"market": "B", "population_growth": .7, "employment_growth": .7, "rent_growth": .7, "liquidity": .7, "risk": .2},
+    ])
+    ranked = rank_markets(markets)
+    assert ranked.iloc[0]["market"] == "B"
+    assert market_score(markets.iloc[1].to_dict())["risk_adjusted_score"] > 0
+
+
+def test_portfolio_exposure_respects_capital():
+    deals = pd.DataFrame([
+        {"asset": "A", "equity_required": 100, "risk_adjusted_score": 80},
+        {"asset": "B", "equity_required": 100, "risk_adjusted_score": 40},
+    ])
+    output = portfolio_exposure(deals, 1000)
+    assert output["recommended_allocation"].sum() == pytest.approx(1000)
