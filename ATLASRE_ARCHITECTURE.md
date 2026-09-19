@@ -91,3 +91,8 @@ The reference implementation now treats invalid numerical inputs as model errors
 ## v0.7 decision controls
 
 A model passing economic thresholds is not equivalent to an investable recommendation. The IC layer therefore treats source verification as a separate gate and reports governance flags alongside return and coverage flags. A case cannot pass the initial screen while its source package remains unverified. Risk review includes expected shortfall, not only percentile summaries, and every assumption snapshot plus lineage set can be hashed into a model-run fingerprint for reproducibility.
+
+
+## v0.8 portfolio control surface
+
+Portfolio allocation now separates capital eligibility, DSCR eligibility, and actual allocation. It reports risk exposure on invested capital through DSCR-breach share, negative-IRR share, concentration HHI, and maximum asset weight. Constraint reasons are retained per asset so excluded capital is explainable rather than silently disappearing.

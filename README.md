@@ -167,3 +167,8 @@ The repository currently passes **27 tests**. It remains a deterministic analyti
 IC screening is now source-aware: a case marked `REVIEW REQUIRED` cannot pass automatically even if its modeled returns clear the economic thresholds. Flags are classified as `CRITICAL`, `HIGH`, `GOVERNANCE`, or `INFO`, and the decision state is explicitly one of `PASSES INITIAL SCREEN`, `REVIEW REQUIRED`, or `REJECT / REWORK`. Side-by-side comparisons expose critical and review-flag counts rather than only a free-text summary.
 
 Risk summaries now include expected shortfall for the worst 10% of IRR and NPV outcomes, in addition to percentile tails and DSCR-breach probability. Governance includes a deterministic model-run fingerprint over the model version, assumption snapshot, and lineage records, creating a reproducibility handle without pretending to provide persistent storage.
+
+
+## Portfolio risk view (v0.8)
+
+Portfolio review now reports financed exposure, not only weighted return. The allocator exposes capital eligibility, DSCR eligibility, constraint reason, DSCR-breach exposure, negative-IRR exposure, concentration HHI, and maximum asset weight. This keeps capital rationing and portfolio risk visible when an asset is excluded or capped. The test suite now passes **32 tests**.

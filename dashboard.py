@@ -10,7 +10,7 @@ from src.debt import DebtTerms, monthly_debt_schedule, size_debt_from_constraint
 from src.governance import assumption_register, default_lineage, ic_workflow, lineage_json, model_run_fingerprint
 from src.ic_workflow import DealCase, compare_deals, generate_ic_memo
 from src.institutional import MonthlyDevelopmentInputs, WaterfallTier, monthly_development_model, multi_tier_waterfall, size_debt
-from src.portfolio import portfolio_allocation, portfolio_snapshot
+from src.portfolio import portfolio_allocation, portfolio_risk_view, portfolio_snapshot
 
 st.set_page_config(page_title="AtlasRE Investment Intelligence", page_icon="◆", layout="wide")
 
@@ -125,7 +125,10 @@ with portfolio_tab:
     pcols[2].metric("Unallocated", f"${snapshot['unallocated_equity']:,.0f}")
     pcols[3].metric("Weighted IRR", f"{snapshot['weighted_irr']:.1%}")
     pcols[4].metric("Min portfolio DSCR", f"{snapshot['minimum_portfolio_dscr']:.2f}x")
-    st.dataframe(portfolio_allocation(portfolio_deals, capital).style.format({"equity_required": "${:,.0f}", "risk_adjusted_score": "{:.1f}", "levered_irr": "{:.1%}", "minimum_dscr": "{:.2f}x", "recommended_allocation": "${:,.0f}"}), use_container_width=True, hide_index=True)
+    allocation = portfolio_allocation(portfolio_deals, capital)
+    risk_view = portfolio_risk_view(allocation)
+    st.caption(f"DSCR-breach exposure: {risk_view['dscr_breach_exposure']:.1%} · Negative-IRR exposure: {risk_view['negative_irr_exposure']:.1%} · Concentration HHI: {risk_view['concentration_hhi']:.3f} · Max asset weight: {risk_view['max_asset_weight']:.1%}")
+    st.dataframe(allocation.style.format({"equity_required": "${:,.0f}", "risk_adjusted_score": "{:.1f}", "levered_irr": "{:.1%}", "minimum_dscr": "{:.2f}x", "recommended_allocation": "${:,.0f}"}), use_container_width=True, hide_index=True)
 
 with governance_tab:
     st.subheader("Investment committee governance")
