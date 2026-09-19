@@ -4,7 +4,7 @@
 
 AtlasRE is a transparent investment-intelligence prototype for comparing real-estate opportunities across markets. It converts a small set of investment assumptions into a decision surface that shows return, leverage, terminal-value sensitivity, market risk, and capital-allocation implications.
 
-The purpose is not to replace an investment committee. The purpose is to make the committee's assumptions visible, comparable, and easier to challenge before capital is committed.
+The purpose is not to replace an investment committee. The purpose is to make the committee's assumptions visible, comparable, and easier to challenge before capital is committed. The latest version adds monthly development draws, construction debt, capitalized interest, DSCR-constrained debt sizing, LP/GP distributions, and a generated committee report.
 
 ## What an executive sees first
 

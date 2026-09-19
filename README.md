@@ -116,3 +116,17 @@ The project does not present an attractive base case as a conclusion. It present
 The underwriting engine now amortizes debt monthly, reports the remaining balance at exit, and calculates minimum DSCR across the hold period. A committee summary applies explicit initial-screen flags for return below hurdle, thin debt coverage, and negative unlevered NPV. A break-even exit-cap solver shows the terminal capitalization rate required to meet the selected hurdle.
 
 The dashboard also includes a one-way exit-cap sensitivity table. This is a more useful committee artifact than a single base-case IRR because it makes the terminal-value dependency visible and gives reviewers a precise assumption to challenge.
+
+## Institutional underwriting upgrade
+
+The latest version adds a monthly development model with land, hard-cost, soft-cost, and contingency draws; construction-period debt draws; capitalized interest; stabilization ramp; sale proceeds; and debt repayment at exit. It also sizes acquisition debt from the binding LTV and DSCR constraints, rather than selecting leverage as an isolated input.
+
+The LP/GP distribution module applies return of capital, a preferred return, and a sponsor promote. The assumption register labels every supplied input as requiring review until a source is attached. This keeps an illustrative model from being mistaken for verified diligence.
+
+Run the committee report generator with:
+
+```bash
+python generate_committee_report.py
+```
+
+It produces a Markdown investment-committee review, stress-case CSV, and monthly development-model CSV under `artifacts/`. The report is intentionally written as a screening document: it states what the model says, what it does not say, and which diligence steps must happen before an approval decision.

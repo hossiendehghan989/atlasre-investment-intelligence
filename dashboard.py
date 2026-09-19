@@ -6,6 +6,7 @@ import streamlit as st
 from src.atlasre import DealInputs, rank_markets, scenario_matrix, underwrite_deal
 from src.advanced_underwriting import DevelopmentInputs, development_feasibility, monte_carlo_underwriting, risk_summary, stress_test
 from src.committee_analytics import investment_committee_summary, sensitivity_table
+from src.institutional import MonthlyDevelopmentInputs, monthly_development_model, size_debt
 
 st.set_page_config(page_title="AtlasRE Investment Intelligence", page_icon="◆", layout="wide")
 st.title("AtlasRE Investment Intelligence")
@@ -72,6 +73,13 @@ with development_tab:
     cols[3].metric("Investor IRR", f"{result['investor_irr']:.1%}")
     cols[4].metric("Investor multiple", f"{result['investor_equity_multiple']:.2f}x")
     st.write("The development module includes land, hard costs, soft costs, contingency, construction debt, capitalized interest, a preferred return, and a promote waterfall.")
+    monthly_inputs = MonthlyDevelopmentInputs(land_cost=5_000_000, hard_cost=12_000_000, soft_cost=2_500_000, stabilized_annual_noi=1_800_000)
+    monthly_model, monthly_summary = monthly_development_model(monthly_inputs)
+    st.subheader("Monthly sources-and-uses schedule")
+    st.dataframe(monthly_model.tail(12).style.format({"total_draw": "${:,.0f}", "debt_draw": "${:,.0f}", "interest": "${:,.0f}", "ending_debt": "${:,.0f}", "noi": "${:,.0f}", "sale_proceeds": "${:,.0f}"}), use_container_width=True, hide_index=True)
+    st.caption(f"Capitalized interest: ${monthly_summary['capitalized_interest']:,.0f} · Project IRR before waterfall: {monthly_summary['project_irr']:.1%}")
+    debt_sizing = size_debt(noi, underwriting["entry_cap_rate"], 0.60, 1.25, 0.07, 25, price)
+    st.write(f"Debt sizing: ${debt_sizing['recommended_loan']:,.0f} recommended, constrained by the lower of LTV (${debt_sizing['ltv_limit']:,.0f}) and DSCR (${debt_sizing['dscr_limit']:,.0f}).")
 
 with markets_tab:
     st.header("Global market selection")
