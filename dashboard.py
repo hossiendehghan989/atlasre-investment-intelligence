@@ -12,7 +12,7 @@ from src.governance import default_lineage, lineage_json, model_run_fingerprint,
 from src.ic_workflow import DealCase, compare_deals, generate_ic_memo, screen_case
 from src.lease import LeaseUnderwritingInputs, illustrative_rent_roll, lease_summary, underwrite_with_lease_roll
 from src.portfolio import portfolio_allocation, portfolio_risk_view, portfolio_snapshot
-from src.presentation import fraction_from_percent
+from src.presentation import fraction_from_percent, percent_or_na
 from src.reconciliation import build_reconciliation_workbook
 
 ROOT = Path(__file__).resolve().parent
@@ -142,7 +142,7 @@ with st.expander("Risk tail detail", expanded=False):
     with tail_left:
         st.dataframe(pd.DataFrame({"Measure": ["P05 IRR", "P10 IRR", "Worst simulated IRR", "Probability IRR below hurdle"], "Value": [f"{risk['p05_irr']:.1%}", f"{risk['p10_irr']:.1%}", f"{risk['worst_irr']:.1%}", f"{risk['probability_irr_below_hurdle']:.1%}"]}), use_container_width=True, hide_index=True)
     with tail_right:
-        st.dataframe(pd.DataFrame({"Measure": ["Expected shortfall NPV", "Probability DSCR < 1.25x", "Break-even exit cap", "Debt at exit"], "Value": [f"${risk['expected_shortfall_npv_10']:,.0f}", f"{risk['probability_dscr_below_125']:.1%}", f"{committee['break_even_exit_cap']:.2%}", f"${underwriting['remaining_debt_at_exit']:,.0f}"]}), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame({"Measure": ["Expected shortfall NPV", "Probability DSCR < 1.25x", "Break-even exit cap", "Debt at exit"], "Value": [f"${risk['expected_shortfall_npv_10']:,.0f}", f"{risk['probability_dscr_below_125']:.1%}", percent_or_na(committee['break_even_exit_cap']), f"${underwriting['remaining_debt_at_exit']:,.0f}"]}), use_container_width=True, hide_index=True)
 
 st.markdown("## Current case")
 base_cols = st.columns(5)

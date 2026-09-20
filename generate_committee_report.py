@@ -22,6 +22,7 @@ from src.lease import (
     lease_summary,
     underwrite_with_lease_roll,
 )
+from src.presentation import percent_or_na
 from src.reconciliation import build_reconciliation_workbook
 
 MODEL_VERSION = "deterministic-core-v0.10"
@@ -198,7 +199,7 @@ def build_screening_package(
 | Minimum DSCR | {underwriting['minimum_dscr']:.2f}x |
 | Unlevered NPV | ${underwriting['unlevered_npv']:,.0f} |
 | Remaining debt at exit | ${underwriting['remaining_debt_at_exit']:,.0f} |
-| Break-even exit cap at 12% hurdle | {committee['break_even_exit_cap']:.2%} |
+| Break-even exit cap at 12% hurdle | {percent_or_na(committee['break_even_exit_cap'])} |
 
 ## 6. Risk tails and covenant review
 
