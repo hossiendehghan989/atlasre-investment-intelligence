@@ -1,7 +1,7 @@
 import pytest
 
 from src.atlasre import DealInputs, underwrite_deal
-from src.presentation import fraction_from_percent
+from src.presentation import fraction_from_percent, percent_or_na
 
 
 def test_fraction_from_percent_preserves_model_fraction_values():
@@ -25,3 +25,9 @@ def test_percent_display_conversion_keeps_underwriting_results_identical():
     converted_result = underwrite_deal(converted)
     for key in ("levered_irr", "unlevered_npv", "equity_multiple", "minimum_dscr", "exit_value"):
         assert converted_result[key] == pytest.approx(direct_result[key])
+
+
+def test_percent_or_na_does_not_render_non_finite_values_as_nan():
+    assert percent_or_na(0.0599) == "5.99%"
+    assert percent_or_na(float("nan")) == "N/A"
+    assert percent_or_na(float("inf")) == "N/A"

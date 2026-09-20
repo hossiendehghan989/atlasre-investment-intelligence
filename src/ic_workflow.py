@@ -11,6 +11,7 @@ import pandas as pd
 from .atlasre import DealInputs, underwrite_deal
 from .committee_analytics import investment_committee_summary
 from .governance import assumption_register, default_lineage, model_run_fingerprint
+from .presentation import percent_or_na
 
 DecisionStatus = Literal["PASSES INITIAL SCREEN", "REVIEW REQUIRED", "REJECT / REWORK"]
 
@@ -184,7 +185,7 @@ This is a screening memo, not an approval. The deterministic model cannot substi
 | Minimum DSCR | {result['minimum_dscr']:.2f}x |
 | Unlevered NPV | ${result['unlevered_npv']:,.0f} |
 | Exit value | ${result['exit_value']:,.0f} |
-| Break-even exit cap | {summary['break_even_exit_cap']:.2%} |
+| Break-even exit cap | {percent_or_na(summary['break_even_exit_cap'])} |
 
 ## 4. Assumptions and traceability
 
