@@ -1,0 +1,60 @@
+name: Model review finding
+description: Record a specific finance-model review finding
+title: "[Model review] "
+labels:
+  - model-review
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for a concrete review finding. Do not include confidential deal data or personal information.
+  - type: input
+    id: location
+    attributes:
+      label: File, function, sheet, or row
+      placeholder: src/atlasre.py — underwrite_deal
+    validations:
+      required: true
+  - type: dropdown
+    id: disposition
+    attributes:
+      label: Disposition
+      options:
+        - Agree
+        - Disagree
+        - Unclear
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - Blocker
+        - Material
+        - Minor
+        - Informational
+    validations:
+      required: true
+  - type: textarea
+    id: finding
+    attributes:
+      label: Finding and expected behavior
+      description: State the formula, convention, missing control, or disclosure issue precisely.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence or reproducible steps
+    validations:
+      required: true
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope confirmation
+      options:
+        - label: This report contains no confidential deal data or personal information.
+          required: true
+        - label: I understand bundled data is illustrative and this issue does not itself constitute an independent review.
+          required: true

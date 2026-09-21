@@ -136,7 +136,7 @@ def generate_ic_memo(
     hurdle_rate: float = 0.12,
     author: str = "AtlasRE",
     model_version: str = "deterministic-core-v0.10",
-    risk_metrics: dict[str, float] | None = None,
+    risk_metrics: dict[str, float | None] | None = None,
 ) -> str:
     """Generate a downside-first screening memo with a reproducibility handle."""
     result = underwrite_deal(case.inputs)
@@ -149,10 +149,10 @@ def generate_ic_memo(
     if risk_metrics is not None:
         tail_section = f"""| Metric | Result |
 | --- | ---: |
-| Expected shortfall, worst 10% IRR | {risk_metrics['expected_shortfall_irr_10']:.2%} |
-| Expected shortfall, worst 10% NPV | ${risk_metrics['expected_shortfall_npv_10']:,.0f} |
-| Probability negative NPV | {risk_metrics['probability_negative_npv']:.2%} |
-| Probability DSCR below 1.25x | {risk_metrics['probability_dscr_below_125']:.2%} |"""
+| Expected shortfall, worst 10% IRR | {percent_or_na(risk_metrics['expected_shortfall_irr_10'])} |
+| Expected shortfall, worst 10% NPV | {"N/A" if risk_metrics['expected_shortfall_npv_10'] is None else f"${risk_metrics['expected_shortfall_npv_10']:,.0f}"} |
+| Probability negative NPV | {percent_or_na(risk_metrics['probability_negative_npv'])} |
+| Probability DSCR below 1.25x | {percent_or_na(risk_metrics['probability_dscr_below_125'])} |"""
     return f"""# Investment Committee Screening Memo — {case.name}
 
 **Deal ID:** {case.deal_id}  

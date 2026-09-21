@@ -209,19 +209,33 @@ def monte_carlo_underwriting(
     )
 
 
-def risk_summary(simulations: pd.DataFrame, hurdle_rate: float = 0.12) -> dict[str, float]:
-    """Summarize tails, hurdle failure, NPV loss, and DSCR breach probability."""
+def risk_summary(simulations: pd.DataFrame, hurdle_rate: float = 0.12) -> dict[str, float | None]:
+    """Summarize each risk series independently; unavailable metrics are ``None``."""
     required = {"levered_irr", "unlevered_npv", "minimum_dscr"}
     if not required.issubset(simulations.columns):
         raise ValueError(f"simulations must include {sorted(required)}")
     irr = simulations["levered_irr"].replace([np.inf, -np.inf], np.nan).dropna()
     npv = simulations["unlevered_npv"].replace([np.inf, -np.inf], np.nan).dropna()
     dscr = simulations["minimum_dscr"].replace([np.inf, -np.inf], np.nan).dropna()
-    if irr.empty or npv.empty or dscr.empty:
-        raise ValueError("simulations contain no finite risk observations")
-    irr_tail = irr[irr <= irr.quantile(0.10)]
-    npv_tail = npv[npv <= npv.quantile(0.10)]
-    return {"p05_irr": float(irr.quantile(0.05)), "p10_irr": float(irr.quantile(0.10)), "median_irr": float(irr.median()), "p90_irr": float(irr.quantile(0.90)), "p95_irr": float(irr.quantile(0.95)), "expected_shortfall_irr_10": float(irr_tail.mean()), "expected_shortfall_npv_10": float(npv_tail.mean()), "worst_irr": float(irr.min()), "probability_irr_below_hurdle": float((irr < hurdle_rate).mean()), "probability_negative_npv": float((npv < 0).mean()), "median_npv": float(npv.median()), "probability_dscr_below_125": float((dscr < 1.25).mean())}
+    def quantile(series: pd.Series, probability: float) -> float | None:
+        return float(series.quantile(probability)) if not series.empty else None
+
+    irr_tail = irr[irr <= irr.quantile(0.10)] if not irr.empty else irr
+    npv_tail = npv[npv <= npv.quantile(0.10)] if not npv.empty else npv
+    return {
+        "p05_irr": quantile(irr, 0.05),
+        "p10_irr": quantile(irr, 0.10),
+        "median_irr": quantile(irr, 0.50),
+        "p90_irr": quantile(irr, 0.90),
+        "p95_irr": quantile(irr, 0.95),
+        "expected_shortfall_irr_10": float(irr_tail.mean()) if not irr_tail.empty else None,
+        "expected_shortfall_npv_10": float(npv_tail.mean()) if not npv_tail.empty else None,
+        "worst_irr": float(irr.min()) if not irr.empty else None,
+        "probability_irr_below_hurdle": float((irr < hurdle_rate).mean()) if not irr.empty else None,
+        "probability_negative_npv": float((npv < 0).mean()) if not npv.empty else None,
+        "median_npv": quantile(npv, 0.50),
+        "probability_dscr_below_125": float((dscr < 1.25).mean()) if not dscr.empty else None,
+    }
 
 
 def stress_test(deal: DealInputs) -> pd.DataFrame:

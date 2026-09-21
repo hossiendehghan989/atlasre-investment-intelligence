@@ -2,6 +2,8 @@
 
 This guide explains how to check the default acquisition case independently. AtlasRE is screening decision support, not a valuation opinion or approval workflow. The workbook, package, and screenshots use **ILLUSTRATIVE** inputs and remain subject to source-document reconciliation.
 
+Start with the [project overview](OVERVIEW.md), then use the [review request](REVIEW_REQUEST.md) to define scope and the [structured checklist](review/REVIEW_CHECKLIST.md) to record findings. No independent review is claimed by this repository.
+
 ## Start with the control sheet
 
 Open `excel_reconciliation.xlsx` in Excel or LibreOffice and allow the workbook to recalculate. Read the **Control** sheet first. It identifies the model version, source status, and run fingerprint. Then open **Inputs**. The values in that sheet are the complete core acquisition input set: price, year-one NOI, hold period, NOI growth, exit cap, discount rate, transaction costs, leverage, debt rate, amortization period, and IRR hurdle.

@@ -22,7 +22,7 @@ from src.lease import (
     lease_summary,
     underwrite_with_lease_roll,
 )
-from src.presentation import percent_or_na
+from src.presentation import number_or_na, percent_or_na
 from src.reconciliation import build_reconciliation_workbook
 
 MODEL_VERSION = "deterministic-core-v0.10"
@@ -119,6 +119,13 @@ def build_screening_package(
     underwriting = underwrite_deal(case_deal)
     simulations_df = monte_carlo_underwriting(case_deal, simulations=simulations, seed=42)
     risk = risk_summary(simulations_df, hurdle_rate=hurdle_rate)
+
+    def risk_percent(key: str) -> str:
+        return percent_or_na(risk[key], 2)
+
+    def risk_number(key: str) -> str:
+        return number_or_na(risk[key], prefix="$")
+
     stress = stress_test(case_deal)
     monthly_development, _development_summary = monthly_development_model(
         MonthlyDevelopmentInputs(5_000_000, 12_000_000, 2_500_000)
@@ -205,14 +212,14 @@ def build_screening_package(
 
 | Risk metric | Result |
 | --- | ---: |
-| P05 levered IRR | {risk['p05_irr']:.2%} |
-| P10 levered IRR | {risk['p10_irr']:.2%} |
-| Expected shortfall, worst 10% IRR | {risk['expected_shortfall_irr_10']:.2%} |
-| Expected shortfall, worst 10% NPV | ${risk['expected_shortfall_npv_10']:,.0f} |
-| Worst simulated IRR | {risk['worst_irr']:.2%} |
-| Probability IRR below hurdle | {risk['probability_irr_below_hurdle']:.2%} |
-| Probability negative NPV | {risk['probability_negative_npv']:.2%} |
-| Probability DSCR below 1.25x | {risk['probability_dscr_below_125']:.2%} |
+| P05 levered IRR | {risk_percent('p05_irr')} |
+| P10 levered IRR | {risk_percent('p10_irr')} |
+| Expected shortfall, worst 10% IRR | {risk_percent('expected_shortfall_irr_10')} |
+| Expected shortfall, worst 10% NPV | {risk_number('expected_shortfall_npv_10')} |
+| Worst simulated IRR | {risk_percent('worst_irr')} |
+| Probability IRR below hurdle | {risk_percent('probability_irr_below_hurdle')} |
+| Probability negative NPV | {risk_percent('probability_negative_npv')} |
+| Probability DSCR below 1.25x | {risk_percent('probability_dscr_below_125')} |
 
 ## 7. Lease-level evidence
 

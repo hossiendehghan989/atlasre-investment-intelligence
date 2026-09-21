@@ -8,8 +8,15 @@ def fraction_from_percent(display_percent: float) -> float:
     return float(display_percent) / 100.0
 
 
-def percent_or_na(value: float, decimals: int = 2) -> str:
+def percent_or_na(value: float | None, decimals: int = 2) -> str:
     """Format a fractional percentage, using ``N/A`` when no finite result exists."""
-    if not math.isfinite(float(value)):
+    if value is None or not math.isfinite(float(value)):
         return "N/A"
     return f"{value:.{decimals}%}"
+
+
+def number_or_na(value: float | None, decimals: int = 0, prefix: str = "", suffix: str = "") -> str:
+    """Format a finite number or return ``N/A`` without exposing NaN or infinity."""
+    if value is None or not math.isfinite(float(value)):
+        return "N/A"
+    return f"{prefix}{value:,.{decimals}f}{suffix}"

@@ -4,6 +4,8 @@
 
 AtlasRE is a Python and Streamlit prototype that calculates and records an **ILLUSTRATIVE** real-estate acquisition screening case from explicit assumptions.
 
+**Who this is for / what problem it addresses:** AtlasRE is for an analyst or reviewer who wants to inspect formulas, assumptions, reconciliation, and downside flags for one early-stage acquisition case. It keeps those review materials together without claiming source validation, independent review, or investment approval; see the [project overview](docs/OVERVIEW.md).
+
 | Decision summary | Downside view | Review files |
 | --- | --- | --- |
 | ![Decision summary](docs/images/decision-summary.png) | ![Downside view](docs/images/downside-risk.png) | ![Review package](docs/images/review-package.png) |
@@ -19,6 +21,8 @@ python -m pip install -r requirements.lock && streamlit run dashboard.py
 ```
 
 Open the local URL printed by Streamlit. Change an assumption, inspect the downside flags, select **Prepare review files**, and download the ZIP or formula-based Excel reconciliation workbook. Every bundled input and output remains **ILLUSTRATIVE**. The dashboard and CLI review package both use 5,000 seeded downside simulations.
+
+For an owner-supplied case, run locally with `python scripts/screen_deal.py path/to/deal.json --output deal-review`; start from [the JSON template](docs/templates/deal_template.json) and read [USING_A_REAL_DEAL](docs/USING_A_REAL_DEAL.md).
 
 **Live demo:** [atlasre-screening-demo.streamlit.app](https://atlasre-screening-demo.streamlit.app/) — uses ILLUSTRATIVE data, has no authentication, is not for sensitive data, and the free app may take a short time to wake up if it has been idle.
 

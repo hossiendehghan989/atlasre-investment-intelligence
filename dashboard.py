@@ -1,3 +1,4 @@
+import math
 from pathlib import Path
 
 import pandas as pd
@@ -12,10 +13,15 @@ from src.governance import default_lineage, lineage_json, model_run_fingerprint,
 from src.ic_workflow import DealCase, compare_deals, generate_ic_memo, screen_case
 from src.lease import LeaseUnderwritingInputs, illustrative_rent_roll, lease_summary, underwrite_with_lease_roll
 from src.portfolio import portfolio_allocation, portfolio_risk_view, portfolio_snapshot
-from src.presentation import fraction_from_percent, percent_or_na
+from src.presentation import fraction_from_percent, number_or_na, percent_or_na
 from src.reconciliation import build_reconciliation_workbook
 
 ROOT = Path(__file__).resolve().parent
+
+
+def finite_or_zero(value: float) -> float:
+    """Keep optional portfolio display analytics finite without changing model outputs."""
+    return float(value) if math.isfinite(float(value)) else 0.0
 
 st.set_page_config(page_title="AtlasRE | Deal Review", layout="wide", initial_sidebar_state="expanded")
 
@@ -80,6 +86,7 @@ with st.sidebar:
     leverage = fraction_from_percent(st.slider("Leverage", 0.0, 80.0, 50.0, 5.0, format="%.0f%%"))
     hurdle = fraction_from_percent(st.slider("Return hurdle", 6.0, 20.0, 12.0, 1.0, format="%.0f%%"))
     st.markdown("<div class='section-rule'></div>", unsafe_allow_html=True)
+    st.warning("Illustrative data only. Do not enter confidential deal data in this hosted demo.")
     st.caption("Change the assumptions to test the case. Confirm figures before circulation.")
 
 base_deal = DealInputs(price, noi, hold, growth, exit_cap, hurdle - 0.02, 0.03, 0.02, leverage)
@@ -134,15 +141,15 @@ st.markdown("## Downside first")
 downside_cols = st.columns(4)
 downside_cols[0].metric("Unlevered NPV", f"${underwriting['unlevered_npv']:,.0f}")
 downside_cols[1].metric("Minimum DSCR", f"{underwriting['minimum_dscr']:.2f}x")
-downside_cols[2].metric("IRR in worst 10%", f"{risk['expected_shortfall_irr_10']:.1%}")
-downside_cols[3].metric("Chance of value loss", f"{risk['probability_negative_npv']:.1%}")
+downside_cols[2].metric("IRR in worst 10%", percent_or_na(risk["expected_shortfall_irr_10"], 1))
+downside_cols[3].metric("Chance of value loss", percent_or_na(risk["probability_negative_npv"], 1))
 
 with st.expander("Risk tail detail", expanded=False):
     tail_left, tail_right = st.columns(2)
     with tail_left:
-        st.dataframe(pd.DataFrame({"Measure": ["P05 IRR", "P10 IRR", "Worst simulated IRR", "Probability IRR below hurdle"], "Value": [f"{risk['p05_irr']:.1%}", f"{risk['p10_irr']:.1%}", f"{risk['worst_irr']:.1%}", f"{risk['probability_irr_below_hurdle']:.1%}"]}), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame({"Measure": ["P05 IRR", "P10 IRR", "Worst simulated IRR", "Probability IRR below hurdle"], "Value": [percent_or_na(risk["p05_irr"], 1), percent_or_na(risk["p10_irr"], 1), percent_or_na(risk["worst_irr"], 1), percent_or_na(risk["probability_irr_below_hurdle"], 1)]}), use_container_width=True, hide_index=True)
     with tail_right:
-        st.dataframe(pd.DataFrame({"Measure": ["Expected shortfall NPV", "Probability DSCR < 1.25x", "Break-even exit cap", "Debt at exit"], "Value": [f"${risk['expected_shortfall_npv_10']:,.0f}", f"{risk['probability_dscr_below_125']:.1%}", percent_or_na(committee['break_even_exit_cap']), f"${underwriting['remaining_debt_at_exit']:,.0f}"]}), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame({"Measure": ["Expected shortfall NPV", "Probability DSCR < 1.25x", "Break-even exit cap", "Debt at exit"], "Value": [number_or_na(risk["expected_shortfall_npv_10"], prefix="$"), percent_or_na(risk["probability_dscr_below_125"], 1), percent_or_na(committee["break_even_exit_cap"]), number_or_na(underwriting["remaining_debt_at_exit"], prefix="$" )]}), use_container_width=True, hide_index=True)
 
 st.markdown("## Current case")
 base_cols = st.columns(5)
@@ -237,8 +244,8 @@ with tab_portfolio:
     st.markdown("### Allocation check")
     ranked = rank_markets(pd.read_csv(ROOT / "data" / "market_inputs.csv"))
     portfolio_deals = pd.DataFrame([
-        {"asset": "Core-plus logistics · Dubai", "equity_required": underwriting["equity_required"], "risk_adjusted_score": float(ranked.iloc[0]["risk_adjusted_score"]), "levered_irr": underwriting["levered_irr"], "minimum_dscr": underwriting["minimum_dscr"]},
-        {"asset": "Residential value-add · London", "equity_required": underwriting["equity_required"] * 0.8, "risk_adjusted_score": float(ranked.iloc[1]["risk_adjusted_score"]), "levered_irr": underwriting["levered_irr"] - 0.015, "minimum_dscr": underwriting["minimum_dscr"] - 0.05},
+        {"asset": "Core-plus logistics · Dubai", "equity_required": underwriting["equity_required"], "risk_adjusted_score": float(ranked.iloc[0]["risk_adjusted_score"]), "levered_irr": finite_or_zero(underwriting["levered_irr"]), "minimum_dscr": finite_or_zero(underwriting["minimum_dscr"])},
+        {"asset": "Residential value-add · London", "equity_required": underwriting["equity_required"] * 0.8, "risk_adjusted_score": float(ranked.iloc[1]["risk_adjusted_score"]), "levered_irr": finite_or_zero(underwriting["levered_irr"]) - 0.015, "minimum_dscr": finite_or_zero(underwriting["minimum_dscr"]) - 0.05},
     ])
     capital = st.number_input("Available equity ($)", min_value=1_000_000, value=25_000_000, step=1_000_000)
     snapshot = portfolio_snapshot(portfolio_deals, capital)
