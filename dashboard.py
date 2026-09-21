@@ -140,7 +140,7 @@ st.caption("This case stays in review until the open items are resolved and the 
 st.markdown("## Downside first")
 downside_cols = st.columns(4)
 downside_cols[0].metric("Unlevered NPV", f"${underwriting['unlevered_npv']:,.0f}")
-downside_cols[1].metric("Minimum DSCR", f"{underwriting['minimum_dscr']:.2f}x")
+downside_cols[1].metric("Minimum DSCR", number_or_na(underwriting["minimum_dscr"], decimals=2, suffix="x"))
 downside_cols[2].metric("IRR in worst 10%", percent_or_na(risk["expected_shortfall_irr_10"], 1))
 downside_cols[3].metric("Chance of value loss", percent_or_na(risk["probability_negative_npv"], 1))
 
@@ -237,7 +237,7 @@ with tab_debt:
     lease_cols = st.columns(3)
     lease_cols[0].metric("Lease-derived annual NOI", f"${lease_case['lease_derived_annual_noi']:,.0f}")
     lease_cols[1].metric("Lease-path IRR", f"{lease_case['underwriting']['levered_irr']:.1%}")
-    lease_cols[2].metric("Lease-path DSCR", f"{lease_case['underwriting']['minimum_dscr']:.2f}x")
+    lease_cols[2].metric("Lease-path DSCR", number_or_na(lease_case["underwriting"]["minimum_dscr"], decimals=2, suffix="x"))
     st.dataframe(lease_summary(demo_leases).style.format({"annual_rent": "${:,.0f}", "annual_escalation": "{:.1%}", "vacancy_assumption": "{:.1%}", "rollover_rent_change": "{:.1%}"}), use_container_width=True, hide_index=True)
 
 with tab_portfolio:

@@ -26,6 +26,8 @@ def test_dashboard_regressions_and_illustrative_notice():
         app.run(timeout=120)
         assert not app.exception, [exception.value for exception in app.exception]
         assert any("Illustrative data only" in warning.value for warning in app.warning)
+        if label == "Leverage":
+            assert not any("inf" in str(metric.value).lower() for metric in app.metric)
 
 
 def test_template_validates_and_runs_end_to_end(tmp_path):
