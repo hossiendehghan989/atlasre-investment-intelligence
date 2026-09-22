@@ -26,8 +26,6 @@ This is not a valuation opinion, approval, investment recommendation, source-doc
 
 **Author/contact:** [OWNER TO FILL: name/contact]
 
-Built with AI-assisted tooling under the owner's direction and review. **[OWNER TO CONFIRM: "Built with AI-assisted tooling under the owner's direction and review."]**
-
 ## Repository basis
 
 The purpose and boundaries above are based on the repository's current dashboard, core model, generated review package, tests, and existing reviewer guide. They are not evidence that the prototype has been used with a real deal or independently validated.
