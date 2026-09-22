@@ -66,7 +66,7 @@ From the repository root:
 
 ```bash
 python -m pip install -r requirements-test.txt
-python -m pytest -q tests/test_independent_crosschecks.py
+python -m pytest -q tests/test_atlasre.py
 ```
 
 The case is intentionally small. It demonstrates how the model exposes assumptions, calculations, and a governance flag; it does not demonstrate live data ingestion, document reconciliation, tax treatment, complete lease economics, or an approval workflow.

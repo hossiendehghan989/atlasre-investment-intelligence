@@ -68,7 +68,7 @@ src/reconciliation.py          formula-based Excel reconciliation workbook
 generate_committee_report.py   package generator
 dashboard.py                   Streamlit interface
 tests/                         regression and independent cross-checks
-docs/                          reviewer, demo, deployment, and sample materials
+docs/                          [indexed reviewer, demo, deployment, and sample materials](docs/README.md)
 ```
 
 ## License
