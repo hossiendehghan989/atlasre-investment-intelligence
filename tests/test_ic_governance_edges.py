@@ -35,7 +35,7 @@ def test_verified_source_requires_reviewer_and_source_reference():
 
 def test_critical_economic_flag_is_rework_not_review():
     case = DealCase("B", "Overpriced", DealInputs(50_000_000, 100_000, leverage=0.5), "VERIFIED")
-    screened = screen_case(case, ScreeningThresholds(hurdle_rate=.12))
+    screened = screen_case(case, ScreeningThresholds(hurdle_rate=0.12))
     assert screened["status"] == "REJECT / REWORK"
     assert any(flag["severity"] == "CRITICAL" for flag in screened["flags"])
 

@@ -8,7 +8,7 @@ from src.atlasre import DealInputs
 
 
 def test_screening_package_contains_executive_sections_and_supporting_files():
-    files = build_screening_package(DealInputs(10_000_000, 650_000, leverage=.5), simulations=100)
+    files = build_screening_package(DealInputs(10_000_000, 650_000, leverage=0.5), simulations=100)
     report = files["investment_committee_report.md"].decode()
     memo = files["investment_committee_memo.md"].decode()
     package_readme = files["README_ILLUSTRATIVE.md"].decode()
@@ -33,7 +33,7 @@ def test_screening_package_contains_executive_sections_and_supporting_files():
 
 
 def test_screening_package_zip_is_readable():
-    package = screening_package_zip(DealInputs(10_000_000, 650_000, leverage=.5), simulations=50)
+    package = screening_package_zip(DealInputs(10_000_000, 650_000, leverage=0.5), simulations=50)
     with ZipFile(BytesIO(package)) as archive:
         names = set(archive.namelist())
     assert "investment_committee_report.md" in names
@@ -46,10 +46,10 @@ def test_screening_package_zip_is_readable():
 
 
 def test_dashboard_and_cli_default_risk_numbers_match():
-    deal = DealInputs(10_000_000, 650_000, hold_years=5, leverage=.5)
+    deal = DealInputs(10_000_000, 650_000, hold_years=5, leverage=0.5)
     dashboard_risk = risk_summary(
         monte_carlo_underwriting(deal, simulations=DEFAULT_RISK_SIMULATIONS, seed=42),
-        hurdle_rate=.12,
+        hurdle_rate=0.12,
     )
     cli_files = build_screening_package(deal, simulations=DEFAULT_RISK_SIMULATIONS)
     cli_risk = json.loads(cli_files["risk_summary.json"])
@@ -58,7 +58,7 @@ def test_dashboard_and_cli_default_risk_numbers_match():
 
 def test_verified_without_evidence_is_review_required_throughout_package():
     files = build_screening_package(
-        DealInputs(10_000_000, 650_000, leverage=.5),
+        DealInputs(10_000_000, 650_000, leverage=0.5),
         source_status="VERIFIED",
         simulations=25,
     )
@@ -71,7 +71,7 @@ def test_verified_without_evidence_is_review_required_throughout_package():
 
 def test_verified_with_evidence_is_verified_throughout_package():
     files = build_screening_package(
-        DealInputs(10_000_000, 650_000, leverage=.5),
+        DealInputs(10_000_000, 650_000, leverage=0.5),
         source_status="VERIFIED",
         verified_by="Reviewer A",
         source_reference="data-room://deal-001/operating-statement.pdf",

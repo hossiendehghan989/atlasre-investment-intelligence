@@ -1,4 +1,5 @@
 """Governance primitives for transparent, reviewable investment decisions."""
+
 from __future__ import annotations
 
 import hashlib
@@ -79,19 +80,23 @@ def versioned_assumptions(
             raise ValueError("assumption values must be (value, unit) tuples")
         value, unit = value_and_unit
         assumption_id = _stable_assumption_id(deal_id, name, version)
-        rows.append(asdict(Assumption(
-            assumption_id=assumption_id,
-            name=name.strip(),
-            value=value,
-            unit=str(unit),
-            version=version,
-            source=source,
-            status="VERIFIED" if verified_by else "REVIEW REQUIRED",
-            owner=owner,
-            verified_by=verified_by,
-            effective_at=effective_at,
-            supersedes=supersedes.get(name, ""),
-        )))
+        rows.append(
+            asdict(
+                Assumption(
+                    assumption_id=assumption_id,
+                    name=name.strip(),
+                    value=value,
+                    unit=str(unit),
+                    version=version,
+                    source=source,
+                    status="VERIFIED" if verified_by else "REVIEW REQUIRED",
+                    owner=owner,
+                    verified_by=verified_by,
+                    effective_at=effective_at,
+                    supersedes=supersedes.get(name, ""),
+                )
+            )
+        )
     return pd.DataFrame(rows)
 
 
@@ -100,7 +105,14 @@ def assumption_register(values: dict[str, tuple[Any, str]], source: str = "Illus
     return versioned_assumptions(values, source=source).rename(columns={"assumption_id": "id"})
 
 
-def lineage_record(output_name: str, output_value: Any, inputs: Iterable[str], method: str, source_refs: Iterable[str] = (), assumption_version: int = 1) -> LineageRecord:
+def lineage_record(
+    output_name: str,
+    output_value: Any,
+    inputs: Iterable[str],
+    method: str,
+    source_refs: Iterable[str] = (),
+    assumption_version: int = 1,
+) -> LineageRecord:
     inputs_list, sources_list = list(inputs), list(source_refs)
     integer(assumption_version, "assumption_version", minimum=1)
     if not output_name or not inputs_list or not method:
@@ -116,7 +128,11 @@ def lineage_record(output_name: str, output_value: Any, inputs: Iterable[str], m
 
 
 def _canonical_event(event: dict[str, Any]) -> bytes:
-    return json.dumps({key: event[key] for key in ("timestamp", "action", "actor", "payload", "previous_hash")}, sort_keys=True, default=str).encode("utf-8")
+    return json.dumps(
+        {key: event[key] for key in ("timestamp", "action", "actor", "payload", "previous_hash")},
+        sort_keys=True,
+        default=str,
+    ).encode("utf-8")
 
 
 def audit_event(action: str, actor: str, payload: dict[str, Any], previous_hash: str = "GENESIS") -> AuditEvent:
@@ -147,19 +163,62 @@ def verify_audit_chain(events: list[dict[str, Any]]) -> bool:
 
 
 def ic_workflow() -> pd.DataFrame:
-    return pd.DataFrame([
-        {"stage": "Screening", "status": "Complete", "owner": "Acquisitions", "gate": "Core returns + downside visible"},
-        {"stage": "Deep Dive", "status": "In progress", "owner": "Underwriting", "gate": "Sources attached + assumptions reviewed"},
-        {"stage": "Recommendation", "status": "Pending", "owner": "IC sponsor", "gate": "Risk memo and portfolio impact"},
-        {"stage": "Approval", "status": "Pending", "owner": "Investment committee", "gate": "Recorded decision + conditions"},
-    ])
+    return pd.DataFrame(
+        [
+            {
+                "stage": "Screening",
+                "status": "Complete",
+                "owner": "Acquisitions",
+                "gate": "Core returns + downside visible",
+            },
+            {
+                "stage": "Deep Dive",
+                "status": "In progress",
+                "owner": "Underwriting",
+                "gate": "Sources attached + assumptions reviewed",
+            },
+            {
+                "stage": "Recommendation",
+                "status": "Pending",
+                "owner": "IC sponsor",
+                "gate": "Risk memo and portfolio impact",
+            },
+            {
+                "stage": "Approval",
+                "status": "Pending",
+                "owner": "Investment committee",
+                "gate": "Recorded decision + conditions",
+            },
+        ]
+    )
 
 
 def default_lineage() -> list[LineageRecord]:
     return [
-        lineage_record("levered_irr", "derived", ["purchase_price", "annual_noi", "annual_noi_growth", "exit_cap_rate", "leverage"], "annual debt schedule + equity cash-flow IRR", ["deal_inputs.csv"], 1),
-        lineage_record("minimum_dscr", "derived", ["annual_noi", "debt_rate", "debt_amortization_years", "leverage"], "annual NOI / annual debt service", ["loan_terms.xlsx"], 1),
-        lineage_record("exit_value", "derived", ["annual_noi", "annual_noi_growth", "exit_cap_rate"], "forward NOI / exit cap rate", ["market_comps.pdf"], 1),
+        lineage_record(
+            "levered_irr",
+            "derived",
+            ["purchase_price", "annual_noi", "annual_noi_growth", "exit_cap_rate", "leverage"],
+            "annual debt schedule + equity cash-flow IRR",
+            ["deal_inputs.csv"],
+            1,
+        ),
+        lineage_record(
+            "minimum_dscr",
+            "derived",
+            ["annual_noi", "debt_rate", "debt_amortization_years", "leverage"],
+            "annual NOI / annual debt service",
+            ["loan_terms.xlsx"],
+            1,
+        ),
+        lineage_record(
+            "exit_value",
+            "derived",
+            ["annual_noi", "annual_noi_growth", "exit_cap_rate"],
+            "forward NOI / exit cap rate",
+            ["market_comps.pdf"],
+            1,
+        ),
     ]
 
 
@@ -199,20 +258,27 @@ def model_run_fingerprint(model_version: str, assumptions: pd.DataFrame, lineage
     presentation. It changes when any material assumption value, metadata, model
     version, or lineage element changes.
     """
-    id_column = "id" if "id" in assumptions.columns else "assumption_id" if "assumption_id" in assumptions.columns else ""
+    id_column = (
+        "id" if "id" in assumptions.columns else "assumption_id" if "assumption_id" in assumptions.columns else ""
+    )
     if not model_version or not id_column:
         raise ValueError("model_version and assumption IDs are required")
     if assumptions[id_column].isna().any() or assumptions[id_column].duplicated().any():
         raise ValueError("assumption IDs must be present and unique")
     records = [_canonicalize(record) for record in assumptions.to_dict(orient="records")]
     canonical_assumptions = sorted(records, key=lambda record: str(record[id_column]))
-    canonical_lineage = sorted((_canonical_lineage(record) for record in lineage), key=lambda record: json.dumps(record, sort_keys=True, default=str))
+    canonical_lineage = sorted(
+        (_canonical_lineage(record) for record in lineage),
+        key=lambda record: json.dumps(record, sort_keys=True, default=str),
+    )
     payload = {
         "model_version": model_version,
         "assumptions": canonical_assumptions,
         "lineage": canonical_lineage,
     }
-    return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")).hexdigest()
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
+    ).hexdigest()
 
 
 __all__ = [

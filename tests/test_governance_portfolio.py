@@ -18,21 +18,37 @@ def test_assumption_register_marks_inputs_for_review():
 
 
 def test_portfolio_allocation_respects_concentration_and_reports_constraints():
-    deals = pd.DataFrame([
-        {"asset": "A", "equity_required": 100, "risk_adjusted_score": 90, "levered_irr": .18, "minimum_dscr": 1.4},
-        {"asset": "B", "equity_required": 100, "risk_adjusted_score": 30, "levered_irr": .12, "minimum_dscr": 1.1},
-    ])
-    output = portfolio_allocation(deals, 1000, max_single_asset_pct=.6)
+    deals = pd.DataFrame(
+        [
+            {"asset": "A", "equity_required": 100, "risk_adjusted_score": 90, "levered_irr": 0.18, "minimum_dscr": 1.4},
+            {"asset": "B", "equity_required": 100, "risk_adjusted_score": 30, "levered_irr": 0.12, "minimum_dscr": 1.1},
+        ]
+    )
+    output = portfolio_allocation(deals, 1000, max_single_asset_pct=0.6)
     assert output["recommended_allocation"].max() <= 600
     assert set(output.loc[output["asset"] != "UNALLOCATED", "constraint_flag"]) == {"Pass", "Review"}
     assert portfolio_snapshot(deals, 1000)["eligible_assets"] == 2
 
 
 def test_portfolio_allocation_caps_each_deal_and_reports_unallocated_capital():
-    deals = pd.DataFrame([
-        {"asset": "A", "equity_required": 1_000_000, "risk_adjusted_score": 60, "levered_irr": .18, "minimum_dscr": 1.4},
-        {"asset": "B", "equity_required": 1_000_000, "risk_adjusted_score": 40, "levered_irr": .16, "minimum_dscr": 1.4},
-    ])
+    deals = pd.DataFrame(
+        [
+            {
+                "asset": "A",
+                "equity_required": 1_000_000,
+                "risk_adjusted_score": 60,
+                "levered_irr": 0.18,
+                "minimum_dscr": 1.4,
+            },
+            {
+                "asset": "B",
+                "equity_required": 1_000_000,
+                "risk_adjusted_score": 40,
+                "levered_irr": 0.16,
+                "minimum_dscr": 1.4,
+            },
+        ]
+    )
 
     output = portfolio_allocation(deals, 10_000_000, max_single_asset_pct=1.0)
 
@@ -44,10 +60,24 @@ def test_portfolio_allocation_caps_each_deal_and_reports_unallocated_capital():
 
 
 def test_portfolio_allocated_plus_unallocated_equals_available_capital():
-    deals = pd.DataFrame([
-        {"asset": "A", "equity_required": 1_000_000, "risk_adjusted_score": 60, "levered_irr": .18, "minimum_dscr": 1.4},
-        {"asset": "B", "equity_required": 1_000_000, "risk_adjusted_score": 40, "levered_irr": .16, "minimum_dscr": 1.4},
-    ])
+    deals = pd.DataFrame(
+        [
+            {
+                "asset": "A",
+                "equity_required": 1_000_000,
+                "risk_adjusted_score": 60,
+                "levered_irr": 0.18,
+                "minimum_dscr": 1.4,
+            },
+            {
+                "asset": "B",
+                "equity_required": 1_000_000,
+                "risk_adjusted_score": 40,
+                "levered_irr": 0.16,
+                "minimum_dscr": 1.4,
+            },
+        ]
+    )
     available = 10_000_000
     output = portfolio_allocation(deals, available, max_single_asset_pct=1.0)
     assert output["recommended_allocation"].sum() + output["unallocated_equity"].sum() == available

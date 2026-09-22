@@ -1,4 +1,5 @@
 """Shared validation helpers for public financial-model inputs."""
+
 from __future__ import annotations
 
 import math

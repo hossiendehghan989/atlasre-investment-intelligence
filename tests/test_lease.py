@@ -6,8 +6,18 @@ from src.lease import Lease, lease_rollup, lease_summary
 
 
 def test_lease_rollup_applies_escalation_vacancy_and_expiry():
-    leases = [Lease("Tenant A", date(2025, 1, 1), date(2025, 12, 31), 120_000, annual_escalation=.10, vacancy_assumption=.05, credit_quality="STRONG")]
-    rollup = lease_rollup(leases, date(2025, 1, 1), 13, operating_expense_ratio=.20)
+    leases = [
+        Lease(
+            "Tenant A",
+            date(2025, 1, 1),
+            date(2025, 12, 31),
+            120_000,
+            annual_escalation=0.10,
+            vacancy_assumption=0.05,
+            credit_quality="STRONG",
+        )
+    ]
+    rollup = lease_rollup(leases, date(2025, 1, 1), 13, operating_expense_ratio=0.20)
     assert rollup.iloc[0]["contract_rent"] == pytest.approx(10_000)
     assert rollup.iloc[0]["vacancy"] == pytest.approx(500)
     assert rollup.iloc[0]["noi"] == pytest.approx(7_600)

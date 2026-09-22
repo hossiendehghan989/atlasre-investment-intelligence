@@ -5,6 +5,7 @@ callers must opt into deriving NOI from a rent roll. Each monthly output retains
 contract rent, economic vacancy, rollover vacancy, and rollover rent separately
 so a reviewer can challenge the assumptions line by line.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
@@ -51,7 +52,9 @@ class Lease:
             raise ValueError("escalation must be above -100% and vacancy must be in [0, 1]")
         if not -1 < self.rollover_rent_change <= 1:
             raise ValueError("rollover rent change must be above -100% and at most 100%")
-        if self.rollover_vacancy_months is not None and (not isinstance(self.rollover_vacancy_months, int) or self.rollover_vacancy_months < 0):
+        if self.rollover_vacancy_months is not None and (
+            not isinstance(self.rollover_vacancy_months, int) or self.rollover_vacancy_months < 0
+        ):
             raise ValueError("rollover_vacancy_months must be a non-negative integer or None")
         if self.credit_quality not in {"STRONG", "AVERAGE", "WEAK", "UNKNOWN"}:
             raise ValueError("credit_quality is not recognized")
@@ -106,12 +109,16 @@ def _rollover_state(lease: Lease, period_index: int) -> tuple[float, float, bool
         return 0.0, annual_at_expiry / 12, True
     if period_index >= rollover_start:
         years_elapsed = (period_index - rollover_start) // 12
-        replacement_annual_rent = annual_at_expiry * (1 + lease.rollover_rent_change) * (1 + lease.annual_escalation) ** years_elapsed
+        replacement_annual_rent = (
+            annual_at_expiry * (1 + lease.rollover_rent_change) * (1 + lease.annual_escalation) ** years_elapsed
+        )
         return replacement_annual_rent / 12, 0.0, True
     return 0.0, 0.0, False
 
 
-def lease_rollup(leases: list[Lease] | tuple[Lease, ...], start: date, months: int, operating_expense_ratio: float = 0.0) -> pd.DataFrame:
+def lease_rollup(
+    leases: list[Lease] | tuple[Lease, ...], start: date, months: int, operating_expense_ratio: float = 0.0
+) -> pd.DataFrame:
     """Aggregate a rent roll into transparent monthly rent, vacancy, and NOI.
 
     The schedule operates at monthly granularity. A lease beginning or ending
@@ -150,28 +157,37 @@ def lease_rollup(leases: list[Lease] | tuple[Lease, ...], start: date, months: i
         potential_rent = contract_rent + rollover_rent + rollover_vacancy
         effective_rent = contract_rent + rollover_rent - vacancy
         operating_expenses = effective_rent * operating_expense_ratio
-        rows.append({
-            "period": period,
-            "active_leases": active_count,
-            "expiring_leases": expiring_count,
-            "rollover_leases": rollover_count,
-            "contract_rent": contract_rent,
-            "rollover_rent": rollover_rent,
-            "vacancy": vacancy,
-            "rollover_vacancy": rollover_vacancy,
-            "potential_rent": potential_rent,
-            "effective_rent": effective_rent,
-            "operating_expenses": operating_expenses,
-            "noi": effective_rent - operating_expenses,
-        })
+        rows.append(
+            {
+                "period": period,
+                "active_leases": active_count,
+                "expiring_leases": expiring_count,
+                "rollover_leases": rollover_count,
+                "contract_rent": contract_rent,
+                "rollover_rent": rollover_rent,
+                "vacancy": vacancy,
+                "rollover_vacancy": rollover_vacancy,
+                "potential_rent": potential_rent,
+                "effective_rent": effective_rent,
+                "operating_expenses": operating_expenses,
+                "noi": effective_rent - operating_expenses,
+            }
+        )
     return pd.DataFrame(rows)
 
 
 def annual_lease_summary(monthly_rollup: pd.DataFrame) -> pd.DataFrame:
     """Aggregate a validated monthly roll-up into calendar-year NOI evidence."""
     required = {
-        "period", "contract_rent", "rollover_rent", "vacancy", "rollover_vacancy",
-        "potential_rent", "effective_rent", "operating_expenses", "noi",
+        "period",
+        "contract_rent",
+        "rollover_rent",
+        "vacancy",
+        "rollover_vacancy",
+        "potential_rent",
+        "effective_rent",
+        "operating_expenses",
+        "noi",
     }
     missing = required.difference(monthly_rollup.columns)
     if missing:
@@ -179,8 +195,14 @@ def annual_lease_summary(monthly_rollup: pd.DataFrame) -> pd.DataFrame:
     data = monthly_rollup.copy()
     data["year"] = pd.to_datetime(data["period"]).dt.year
     columns = [
-        "contract_rent", "rollover_rent", "vacancy", "rollover_vacancy", "potential_rent",
-        "effective_rent", "operating_expenses", "noi",
+        "contract_rent",
+        "rollover_rent",
+        "vacancy",
+        "rollover_vacancy",
+        "potential_rent",
+        "effective_rent",
+        "operating_expenses",
+        "noi",
     ]
     return data.groupby("year", as_index=False)[columns].sum()
 
@@ -221,27 +243,49 @@ def lease_summary(leases: list[Lease] | tuple[Lease, ...]) -> pd.DataFrame:
     input_leases = tuple(leases)
     for lease in input_leases:
         lease.validate()
-    return pd.DataFrame([
-        {
-            "tenant": lease.tenant,
-            "start": lease.start.isoformat(),
-            "end": lease.end.isoformat(),
-            "annual_rent": lease.annual_rent,
-            "annual_escalation": lease.annual_escalation,
-            "vacancy_assumption": lease.vacancy_assumption,
-            "rollover_vacancy_months": lease.rollover_vacancy_months,
-            "rollover_rent_change": lease.rollover_rent_change,
-            "credit_quality": lease.credit_quality,
-        }
-        for lease in input_leases
-    ])
+    return pd.DataFrame(
+        [
+            {
+                "tenant": lease.tenant,
+                "start": lease.start.isoformat(),
+                "end": lease.end.isoformat(),
+                "annual_rent": lease.annual_rent,
+                "annual_escalation": lease.annual_escalation,
+                "vacancy_assumption": lease.vacancy_assumption,
+                "rollover_vacancy_months": lease.rollover_vacancy_months,
+                "rollover_rent_change": lease.rollover_rent_change,
+                "credit_quality": lease.credit_quality,
+            }
+            for lease in input_leases
+        ]
+    )
 
 
 def illustrative_rent_roll() -> list[Lease]:
     """Return clearly labeled demo leases for the dashboard, never verified data."""
     return [
-        Lease("Illustrative anchor tenant", date(2025, 1, 1), date(2029, 12, 31), 420_000, .02, .02, "STRONG", rollover_vacancy_months=3, rollover_rent_change=.01),
-        Lease("Illustrative local tenant", date(2025, 7, 1), date(2027, 6, 30), 180_000, .03, .08, "AVERAGE", rollover_vacancy_months=6, rollover_rent_change=-.05),
+        Lease(
+            "Illustrative anchor tenant",
+            date(2025, 1, 1),
+            date(2029, 12, 31),
+            420_000,
+            0.02,
+            0.02,
+            "STRONG",
+            rollover_vacancy_months=3,
+            rollover_rent_change=0.01,
+        ),
+        Lease(
+            "Illustrative local tenant",
+            date(2025, 7, 1),
+            date(2027, 6, 30),
+            180_000,
+            0.03,
+            0.08,
+            "AVERAGE",
+            rollover_vacancy_months=6,
+            rollover_rent_change=-0.05,
+        ),
     ]
 
 

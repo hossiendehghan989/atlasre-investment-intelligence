@@ -24,7 +24,9 @@ def test_invalid_deal_and_market_inputs_fail_loudly():
     with pytest.raises(ValueError, match="growth"):
         underwrite_deal(DealInputs(10_000_000, 650_000, annual_noi_growth=-1.0))
     with pytest.raises(ValueError, match="normalized"):
-        market_score({"population_growth": 2, "employment_growth": .5, "rent_growth": .5, "liquidity": .5, "risk": .5})
+        market_score(
+            {"population_growth": 2, "employment_growth": 0.5, "rent_growth": 0.5, "liquidity": 0.5, "risk": 0.5}
+        )
 
 
 def test_governance_rejects_malformed_audit_and_tracks_version():
@@ -32,7 +34,13 @@ def test_governance_rejects_malformed_audit_and_tracks_version():
     assert verify_audit_chain([first])
     malformed = {"action": "created"}
     assert not verify_audit_chain([malformed])
-    register = versioned_assumptions({"exit_cap": (.06, "%")}, deal_id="A", version=3, verified_by="reviewer", supersedes={"exit_cap": "A:exit_cap:v2"})
+    register = versioned_assumptions(
+        {"exit_cap": (0.06, "%")},
+        deal_id="A",
+        version=3,
+        verified_by="reviewer",
+        supersedes={"exit_cap": "A:exit_cap:v2"},
+    )
     assert register.iloc[0]["assumption_id"] == "A:exit_cap:v3"
     assert register.iloc[0]["status"] == "VERIFIED"
     assert register.iloc[0]["supersedes"] == "A:exit_cap:v2"
@@ -42,10 +50,12 @@ def test_governance_rejects_malformed_audit_and_tracks_version():
 def test_lineage_requires_inputs_and_portfolio_is_repeatable():
     with pytest.raises(ValueError, match="lineage"):
         lineage_record("irr", 0.1, [], "method")
-    deals = pd.DataFrame([
-        {"asset": "A", "equity_required": 100, "risk_adjusted_score": 80, "levered_irr": .15, "minimum_dscr": 1.3},
-        {"asset": "B", "equity_required": 100, "risk_adjusted_score": 60, "levered_irr": .14, "minimum_dscr": 1.3},
-    ])
-    left = portfolio_allocation(deals, 1_000, max_single_asset_pct=.5)
-    right = portfolio_allocation(deals, 1_000, max_single_asset_pct=.5)
+    deals = pd.DataFrame(
+        [
+            {"asset": "A", "equity_required": 100, "risk_adjusted_score": 80, "levered_irr": 0.15, "minimum_dscr": 1.3},
+            {"asset": "B", "equity_required": 100, "risk_adjusted_score": 60, "levered_irr": 0.14, "minimum_dscr": 1.3},
+        ]
+    )
+    left = portfolio_allocation(deals, 1_000, max_single_asset_pct=0.5)
+    right = portfolio_allocation(deals, 1_000, max_single_asset_pct=0.5)
     assert left["recommended_allocation"].equals(right["recommended_allocation"])

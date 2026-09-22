@@ -1,4 +1,5 @@
 """Advanced underwriting: development, uncertainty, and downside analytics."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -72,7 +73,21 @@ def development_feasibility(project: DevelopmentInputs) -> dict[str, float | lis
     investor_profit = project_profit - sponsor_promote
     investor_flows = [-equity] + [0.0] * (years - 1) + [equity + investor_profit]
     sponsor_flows = [0.0] * years + [sponsor_promote]
-    return {"total_development_cost": total_cost, "contingency": contingency, "debt_amount": debt, "equity_required": equity, "annual_construction_draw": total_cost / project.construction_years, "capitalized_interest": debt_interest, "exit_value": exit_value, "project_profit_before_waterfall": project_profit, "investor_irr": _irr(investor_flows), "investor_equity_multiple": (equity + investor_profit) / equity, "sponsor_promote": sponsor_promote, "investor_cash_flows": investor_flows, "sponsor_cash_flows": sponsor_flows}
+    return {
+        "total_development_cost": total_cost,
+        "contingency": contingency,
+        "debt_amount": debt,
+        "equity_required": equity,
+        "annual_construction_draw": total_cost / project.construction_years,
+        "capitalized_interest": debt_interest,
+        "exit_value": exit_value,
+        "project_profit_before_waterfall": project_profit,
+        "investor_irr": _irr(investor_flows),
+        "investor_equity_multiple": (equity + investor_profit) / equity,
+        "sponsor_promote": sponsor_promote,
+        "investor_cash_flows": investor_flows,
+        "sponsor_cash_flows": sponsor_flows,
+    }
 
 
 def _first_irr_roots(cash_flows: np.ndarray) -> np.ndarray:
@@ -84,9 +99,7 @@ def _first_irr_roots(cash_flows: np.ndarray) -> np.ndarray:
     first-root convention and its numerical results while avoiding millions of
     repeated grid evaluations.
     """
-    rate_grid = np.concatenate(
-        [np.array([-0.999999, -0.99, -0.90, -0.50, -0.10, 0.0]), np.logspace(-4, 3, 500)]
-    )
+    rate_grid = np.concatenate([np.array([-0.999999, -0.99, -0.90, -0.50, -0.10, 0.0]), np.logspace(-4, 3, 500)])
     periods = np.arange(cash_flows.shape[1], dtype=float)
     discount_factors = np.power(1 + rate_grid[:, None], periods)
     npv_grid = cash_flows @ (1 / discount_factors).T
@@ -133,7 +146,8 @@ def _vectorized_underwriting_outputs(
     payment = np.where(
         monthly_rate == 0,
         debt / amortization_periods,
-        debt * (monthly_rate * np.power(1 + monthly_rate, amortization_periods))
+        debt
+        * (monthly_rate * np.power(1 + monthly_rate, amortization_periods))
         / (np.power(1 + monthly_rate, amortization_periods) - 1),
     )
     for year in range(deal.hold_years):
@@ -157,9 +171,7 @@ def _vectorized_underwriting_outputs(
     levered_flows[:, 1:] -= debt_service
     levered_flows[:, -1] -= balance
     levered_irr = _first_irr_roots(levered_flows)
-    minimum_dscr = np.min(
-        np.divide(noi, debt_service, out=np.full_like(noi, np.inf), where=debt_service != 0), axis=1
-    )
+    minimum_dscr = np.min(np.divide(noi, debt_service, out=np.full_like(noi, np.inf), where=debt_service != 0), axis=1)
     return levered_irr, unlevered_npv, minimum_dscr
 
 
@@ -221,6 +233,7 @@ def risk_summary(simulations: pd.DataFrame, hurdle_rate: float = 0.12) -> dict[s
     irr = simulations["levered_irr"].replace([np.inf, -np.inf], np.nan).dropna()
     npv = simulations["unlevered_npv"].replace([np.inf, -np.inf], np.nan).dropna()
     dscr = simulations["minimum_dscr"].replace([np.inf, -np.inf], np.nan).dropna()
+
     def quantile(series: pd.Series, probability: float) -> float | None:
         return float(series.quantile(probability)) if not series.empty else None
 
@@ -244,10 +257,31 @@ def risk_summary(simulations: pd.DataFrame, hurdle_rate: float = 0.12) -> dict[s
 
 def stress_test(deal: DealInputs) -> pd.DataFrame:
     """Evaluate named, auditable downside cases used in committee review."""
-    cases = {"Base case": {}, "No growth": {"annual_noi_growth": 0.0}, "Exit cap expansion": {"exit_cap_rate": deal.exit_cap_rate + 0.015}, "Cost inflation": {"purchase_price": deal.purchase_price * 1.08}, "Rate shock": {"debt_rate": min(deal.debt_rate + 0.02, 0.20)}, "Combined downside": {"annual_noi_growth": -0.01, "exit_cap_rate": deal.exit_cap_rate + 0.02, "purchase_price": deal.purchase_price * 1.08, "debt_rate": min(deal.debt_rate + 0.02, 0.20)}}
+    cases = {
+        "Base case": {},
+        "No growth": {"annual_noi_growth": 0.0},
+        "Exit cap expansion": {"exit_cap_rate": deal.exit_cap_rate + 0.015},
+        "Cost inflation": {"purchase_price": deal.purchase_price * 1.08},
+        "Rate shock": {"debt_rate": min(deal.debt_rate + 0.02, 0.20)},
+        "Combined downside": {
+            "annual_noi_growth": -0.01,
+            "exit_cap_rate": deal.exit_cap_rate + 0.02,
+            "purchase_price": deal.purchase_price * 1.08,
+            "debt_rate": min(deal.debt_rate + 0.02, 0.20),
+        },
+    }
     rows = []
     for name, overrides in cases.items():
         scenario = DealInputs(**{**deal.__dict__, **overrides})
         result = underwrite_deal(scenario)
-        rows.append({"case": name, "levered_irr": result["levered_irr"], "unlevered_irr": result["unlevered_irr"], "npv": result["unlevered_npv"], "exit_value": result["exit_value"], "minimum_dscr": result["minimum_dscr"]})
+        rows.append(
+            {
+                "case": name,
+                "levered_irr": result["levered_irr"],
+                "unlevered_irr": result["unlevered_irr"],
+                "npv": result["unlevered_npv"],
+                "exit_value": result["exit_value"],
+                "minimum_dscr": result["minimum_dscr"],
+            }
+        )
     return pd.DataFrame(rows)

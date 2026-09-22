@@ -24,12 +24,14 @@ def _template_payload() -> dict[str, object]:
 
 def test_whitespace_only_source_evidence_cannot_verify_a_case(tmp_path):
     payload = _template_payload()
-    payload.update({
-        "source_status": "VERIFIED",
-        "verified_by": "  \t",
-        "source_reference": "\n  ",
-        "leverage": 0.25,
-    })
+    payload.update(
+        {
+            "source_status": "VERIFIED",
+            "verified_by": "  \t",
+            "source_reference": "\n  ",
+            "leverage": 0.25,
+        }
+    )
     input_path = tmp_path / "whitespace-evidence.json"
     input_path.write_text(json.dumps(payload), encoding="utf-8")
 
@@ -43,7 +45,9 @@ def test_generated_memo_and_report_escape_deal_identifier_html():
     deal = DealInputs(10_000_000, 650_000, leverage=0.25)
     unsafe_identifier = "<script>alert(1)</script>"
     memo = generate_ic_memo(DealCase(unsafe_identifier, "<b>case</b>", deal))
-    report = build_screening_package(deal, deal_id=unsafe_identifier, simulations=1)["investment_committee_report.md"].decode("utf-8")
+    report = build_screening_package(deal, deal_id=unsafe_identifier, simulations=1)[
+        "investment_committee_report.md"
+    ].decode("utf-8")
 
     assert unsafe_identifier not in memo
     assert unsafe_identifier not in report

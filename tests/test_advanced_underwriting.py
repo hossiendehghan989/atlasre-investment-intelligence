@@ -28,7 +28,9 @@ def test_development_feasibility_rejects_non_finite_cost_inputs(field, value):
         development_feasibility(DevelopmentInputs(**invalid))
 
 
-@pytest.mark.parametrize("field", ["contingency_pct", "debt_to_cost", "construction_rate", "preferred_return", "promote"])
+@pytest.mark.parametrize(
+    "field", ["contingency_pct", "debt_to_cost", "construction_rate", "preferred_return", "promote"]
+)
 def test_development_feasibility_rejects_negative_percentages(field):
     inputs = DevelopmentInputs(5_000_000, 12_000_000, 2_500_000, stabilized_noi=1_800_000)
     invalid = {**inputs.__dict__, field: -0.01}

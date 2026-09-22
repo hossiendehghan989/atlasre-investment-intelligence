@@ -1,4 +1,5 @@
 """Typed committee workflow, comparison, and downside-first memo generation."""
+
 from __future__ import annotations
 
 import math
@@ -70,22 +71,50 @@ def screen_case(case: DealCase, thresholds: ScreeningThresholds | None = None) -
             evidence = "VERIFIED requires verified_by and source_reference"
         flags.append({"severity": "GOVERNANCE", "flag": "Source package is not verified", "evidence": evidence})
     if result["unlevered_npv"] < 0:
-        flags.append({"severity": "CRITICAL", "flag": "Negative unlevered NPV", "evidence": f"${result['unlevered_npv']:,.0f}"})
+        flags.append(
+            {"severity": "CRITICAL", "flag": "Negative unlevered NPV", "evidence": f"${result['unlevered_npv']:,.0f}"}
+        )
     if result["minimum_dscr"] < thresholds.minimum_dscr:
-        flags.append({"severity": "HIGH", "flag": f"DSCR below {thresholds.minimum_dscr:.2f}x", "evidence": f"{result['minimum_dscr']:.2f}x"})
+        flags.append(
+            {
+                "severity": "HIGH",
+                "flag": f"DSCR below {thresholds.minimum_dscr:.2f}x",
+                "evidence": f"{result['minimum_dscr']:.2f}x",
+            }
+        )
     if not math.isfinite(float(result["levered_irr"])):
-        flags.append({"severity": "CRITICAL", "flag": "Levered IRR is not economically defined", "evidence": "No finite IRR root found"})
+        flags.append(
+            {
+                "severity": "CRITICAL",
+                "flag": "Levered IRR is not economically defined",
+                "evidence": "No finite IRR root found",
+            }
+        )
     elif result["levered_irr"] < thresholds.hurdle_rate:
-        flags.append({"severity": "HIGH", "flag": "Levered IRR below hurdle", "evidence": f"{result['levered_irr']:.1%} vs {thresholds.hurdle_rate:.1%}"})
+        flags.append(
+            {
+                "severity": "HIGH",
+                "flag": "Levered IRR below hurdle",
+                "evidence": f"{result['levered_irr']:.1%} vs {thresholds.hurdle_rate:.1%}",
+            }
+        )
     if not flags:
-        flags.append({"severity": "INFO", "flag": "No initial-screen exception", "evidence": "All configured gates passed"})
+        flags.append(
+            {"severity": "INFO", "flag": "No initial-screen exception", "evidence": "All configured gates passed"}
+        )
     if any(flag["severity"] == "CRITICAL" for flag in flags):
         status: DecisionStatus = "REJECT / REWORK"
     elif any(flag["severity"] in {"HIGH", "GOVERNANCE"} for flag in flags):
         status = "REVIEW REQUIRED"
     else:
         status = "PASSES INITIAL SCREEN"
-    return {"deal_id": case.deal_id, "status": status, "source_status": source_status, "flags": flags, "metrics": result}
+    return {
+        "deal_id": case.deal_id,
+        "status": status,
+        "source_status": source_status,
+        "flags": flags,
+        "metrics": result,
+    }
 
 
 def compare_deals(cases: list[DealCase], hurdle_rate: float = 0.12) -> pd.DataFrame:
@@ -99,21 +128,23 @@ def compare_deals(cases: list[DealCase], hurdle_rate: float = 0.12) -> pd.DataFr
         summary = investment_committee_summary(case.inputs, hurdle_rate)
         screen = screen_case(case, thresholds)
         flags = screen["flags"]
-        rows.append({
-            "deal_id": case.deal_id,
-            "deal": case.name,
-            "source_status": screen["source_status"],
-            "decision_status": screen["status"],
-            "critical_flags": sum(flag["severity"] == "CRITICAL" for flag in flags),
-            "review_flags": sum(flag["severity"] in {"HIGH", "GOVERNANCE"} for flag in flags),
-            "entry_cap": result["entry_cap_rate"],
-            "levered_irr": result["levered_irr"],
-            "unlevered_irr": result["unlevered_irr"],
-            "equity_multiple": result["equity_multiple"],
-            "minimum_dscr": result["minimum_dscr"],
-            "unlevered_npv": result["unlevered_npv"],
-            "decision_flag": summary["decision_flag"],
-        })
+        rows.append(
+            {
+                "deal_id": case.deal_id,
+                "deal": case.name,
+                "source_status": screen["source_status"],
+                "decision_status": screen["status"],
+                "critical_flags": sum(flag["severity"] == "CRITICAL" for flag in flags),
+                "review_flags": sum(flag["severity"] in {"HIGH", "GOVERNANCE"} for flag in flags),
+                "entry_cap": result["entry_cap_rate"],
+                "levered_irr": result["levered_irr"],
+                "unlevered_irr": result["unlevered_irr"],
+                "equity_multiple": result["equity_multiple"],
+                "minimum_dscr": result["minimum_dscr"],
+                "unlevered_npv": result["unlevered_npv"],
+                "decision_flag": summary["decision_flag"],
+            }
+        )
     return pd.DataFrame(rows)
 
 
@@ -149,23 +180,25 @@ def generate_ic_memo(
     assumptions = _memo_assumptions(case)
     fingerprint = model_run_fingerprint(model_version, assumptions, default_lineage())
     flag_lines = "\n".join(f"- **{flag['severity']}** — {flag['flag']}: {flag['evidence']}" for flag in screen["flags"])
-    tail_section = "Risk tails were not supplied for this memo run; run the screening package before a committee decision."
+    tail_section = (
+        "Risk tails were not supplied for this memo run; run the screening package before a committee decision."
+    )
     if risk_metrics is not None:
         tail_section = f"""| Metric | Result |
 | --- | ---: |
-| Expected shortfall, worst 10% IRR | {percent_or_na(risk_metrics['expected_shortfall_irr_10'])} |
-| Expected shortfall, worst 10% NPV | {"N/A" if risk_metrics['expected_shortfall_npv_10'] is None else f"${risk_metrics['expected_shortfall_npv_10']:,.0f}"} |
-| Probability negative NPV | {percent_or_na(risk_metrics['probability_negative_npv'])} |
-| Probability DSCR below 1.25x | {percent_or_na(risk_metrics['probability_dscr_below_125'])} |"""
+| Expected shortfall, worst 10% IRR | {percent_or_na(risk_metrics["expected_shortfall_irr_10"])} |
+| Expected shortfall, worst 10% NPV | {"N/A" if risk_metrics["expected_shortfall_npv_10"] is None else f"${risk_metrics['expected_shortfall_npv_10']:,.0f}"} |
+| Probability negative NPV | {percent_or_na(risk_metrics["probability_negative_npv"])} |
+| Probability DSCR below 1.25x | {percent_or_na(risk_metrics["probability_dscr_below_125"])} |"""
     safe_name = escape(case.name)
     safe_deal_id = escape(case.deal_id)
     return f"""# Investment Committee Screening Memo — {safe_name}
 
-**Deal ID:** {safe_deal_id}{'  '}
+**Deal ID:** {safe_deal_id}{"  "}
 **Prepared by:** {author}  
 **As of:** {datetime.now(UTC).date().isoformat()}
-**Source status:** **{screen['source_status']}**
-**Decision status:** **{screen['status']}**
+**Source status:** **{screen["source_status"]}**
+**Decision status:** **{screen["status"]}**
 **Model-run fingerprint:** `{fingerprint}`
 
 ## 1. Decision framing
@@ -184,14 +217,14 @@ This is a screening memo, not an approval. The deterministic model cannot substi
 
 | Metric | Result |
 | --- | ---: |
-| Entry cap rate | {percent_or_na_report(result['entry_cap_rate'])} |
-| Levered IRR | {percent_or_na_report(result['levered_irr'], reason='IRR did not converge')} |
-| Unlevered IRR | {percent_or_na_report(result['unlevered_irr'], reason='IRR did not converge')} |
-| Equity multiple | {number_or_na_report(result['equity_multiple'], decimals=2, suffix='x', reason='Equity multiple is not defined')} |
-| Minimum DSCR | {number_or_na_report(result['minimum_dscr'], decimals=2, suffix='x', reason='DSCR is not defined')} |
-| Unlevered NPV | {number_or_na_report(result['unlevered_npv'], prefix='$', reason='NPV is not finite')} |
-| Exit value | {number_or_na_report(result['exit_value'], prefix='$', reason='Exit value is not finite')} |
-| Break-even exit cap | {percent_or_na(summary['break_even_exit_cap'])} |
+| Entry cap rate | {percent_or_na_report(result["entry_cap_rate"])} |
+| Levered IRR | {percent_or_na_report(result["levered_irr"], reason="IRR did not converge")} |
+| Unlevered IRR | {percent_or_na_report(result["unlevered_irr"], reason="IRR did not converge")} |
+| Equity multiple | {number_or_na_report(result["equity_multiple"], decimals=2, suffix="x", reason="Equity multiple is not defined")} |
+| Minimum DSCR | {number_or_na_report(result["minimum_dscr"], decimals=2, suffix="x", reason="DSCR is not defined")} |
+| Unlevered NPV | {number_or_na_report(result["unlevered_npv"], prefix="$", reason="NPV is not finite")} |
+| Exit value | {number_or_na_report(result["exit_value"], prefix="$", reason="Exit value is not finite")} |
+| Break-even exit cap | {percent_or_na(summary["break_even_exit_cap"])} |
 
 ## 4. Assumptions and traceability
 
@@ -206,7 +239,7 @@ The assumption register carries stable IDs, version, source status, and superses
 
 ## 6. Recommendation gate
 
-**Initial status:** `{screen['status']}`
+**Initial status:** `{screen["status"]}`
 **Next gate:** resolve every CRITICAL, HIGH, and GOVERNANCE flag, attach source documents, then rerun the downside cases before recommendation.
 """
 

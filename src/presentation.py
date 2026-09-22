@@ -29,7 +29,9 @@ def percent_or_na_report(value: float | None, decimals: int = 2, reason: str = "
     return f"{value:.{decimals}%}"
 
 
-def number_or_na_report(value: float | None, decimals: int = 0, prefix: str = "", suffix: str = "", reason: str = "Result is not finite") -> str:
+def number_or_na_report(
+    value: float | None, decimals: int = 0, prefix: str = "", suffix: str = "", reason: str = "Result is not finite"
+) -> str:
     """Format a report number with an explicit reason for an unavailable result."""
     if value is None or not math.isfinite(float(value)):
         return f"N/A — {reason}"

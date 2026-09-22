@@ -1,4 +1,5 @@
 """Capture reproducible, 1440-pixel-wide dashboard evidence from a running Streamlit app."""
+
 from __future__ import annotations
 
 from pathlib import Path

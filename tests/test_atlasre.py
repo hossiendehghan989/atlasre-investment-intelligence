@@ -20,9 +20,7 @@ def test_debt_service_stops_after_loan_is_fully_amortized():
 
     assert result["debt_service_schedule"][9] > 0
     assert result["debt_service_schedule"][10:] == pytest.approx([0.0] * 15)
-    assert result["cash_flows"][11] == pytest.approx(
-        deal.annual_noi * (1 + deal.annual_noi_growth) ** 10
-    )
+    assert result["cash_flows"][11] == pytest.approx(deal.annual_noi * (1 + deal.annual_noi_growth) ** 10)
 
 
 def test_very_long_hold_does_not_emit_numeric_overflow_warning():
@@ -36,12 +34,12 @@ def test_very_long_hold_does_not_emit_numeric_overflow_warning():
 def test_year_one_noi_is_the_input_noi_before_growth():
     deal = DealInputs(10_000_000, 650_000, hold_years=3, annual_noi_growth=0.10)
     result = underwrite_deal(deal)
-    expected_final_noi = 650_000 * (1.10 ** 2)
+    expected_final_noi = 650_000 * (1.10**2)
     assert result["exit_value"] == pytest.approx(expected_final_noi / deal.exit_cap_rate)
 
 
 def test_equity_multiple_counts_negative_interim_equity_flows_as_new_investment():
-    deal = DealInputs(10_000_000, 100_000, hold_years=3, leverage=.80, debt_rate=.20)
+    deal = DealInputs(10_000_000, 100_000, hold_years=3, leverage=0.80, debt_rate=0.20)
     result = underwrite_deal(deal)
     negative_flows = sum(flow for flow in result["cash_flows"] if flow < 0)
     positive_flows = sum(flow for flow in result["cash_flows"] if flow > 0)
@@ -58,10 +56,26 @@ def test_scenario_matrix_changes_exit_value():
 
 
 def test_market_ranking_penalizes_risk():
-    markets = pd.DataFrame([
-        {"market": "A", "population_growth": .8, "employment_growth": .8, "rent_growth": .8, "liquidity": .8, "risk": .8},
-        {"market": "B", "population_growth": .7, "employment_growth": .7, "rent_growth": .7, "liquidity": .7, "risk": .2},
-    ])
+    markets = pd.DataFrame(
+        [
+            {
+                "market": "A",
+                "population_growth": 0.8,
+                "employment_growth": 0.8,
+                "rent_growth": 0.8,
+                "liquidity": 0.8,
+                "risk": 0.8,
+            },
+            {
+                "market": "B",
+                "population_growth": 0.7,
+                "employment_growth": 0.7,
+                "rent_growth": 0.7,
+                "liquidity": 0.7,
+                "risk": 0.2,
+            },
+        ]
+    )
     ranked = rank_markets(markets)
     assert ranked.iloc[0]["market"] == "B"
     assert market_score(markets.iloc[1].to_dict())["risk_adjusted_score"] > 0
@@ -82,10 +96,12 @@ def test_market_score_applies_risk_once_and_keeps_aliases_consistent():
 
 
 def test_portfolio_exposure_respects_capital():
-    deals = pd.DataFrame([
-        {"asset": "A", "equity_required": 100, "risk_adjusted_score": 80},
-        {"asset": "B", "equity_required": 100, "risk_adjusted_score": 40},
-    ])
+    deals = pd.DataFrame(
+        [
+            {"asset": "A", "equity_required": 100, "risk_adjusted_score": 80},
+            {"asset": "B", "equity_required": 100, "risk_adjusted_score": 40},
+        ]
+    )
     output = portfolio_exposure(deals, 1000)
     assert output["recommended_allocation"].sum() == pytest.approx(1000)
     assert set(output["allocation_method"]) == {"naive score-weighted screen"}

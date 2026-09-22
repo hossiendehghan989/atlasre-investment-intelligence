@@ -1,4 +1,5 @@
 """Run a local screening package from an owner-supplied JSON deal file."""
+
 from __future__ import annotations
 
 import argparse
@@ -15,13 +16,26 @@ from src.atlasre import DealInputs
 
 REQUIRED_FIELDS = {"purchase_price", "annual_noi"}
 DEAL_FIELDS = {
-    "purchase_price", "annual_noi", "hold_years", "annual_noi_growth", "exit_cap_rate",
-    "discount_rate", "acquisition_cost_pct", "selling_cost_pct", "leverage", "debt_rate",
+    "purchase_price",
+    "annual_noi",
+    "hold_years",
+    "annual_noi_growth",
+    "exit_cap_rate",
+    "discount_rate",
+    "acquisition_cost_pct",
+    "selling_cost_pct",
+    "leverage",
+    "debt_rate",
     "debt_amortization_years",
 }
 PERCENT_FIELDS = {
-    "annual_noi_growth", "exit_cap_rate", "discount_rate", "acquisition_cost_pct",
-    "selling_cost_pct", "leverage", "debt_rate",
+    "annual_noi_growth",
+    "exit_cap_rate",
+    "discount_rate",
+    "acquisition_cost_pct",
+    "selling_cost_pct",
+    "leverage",
+    "debt_rate",
 }
 INTEGER_FIELDS = {"hold_years", "debt_amortization_years"}
 
@@ -33,7 +47,14 @@ def load_deal(path: Path) -> dict[str, Any]:
         raise ValueError(f"cannot read valid JSON from {path}: {exc}") from exc
     if not isinstance(payload, dict):
         raise ValueError("deal JSON must contain an object")
-    allowed = DEAL_FIELDS | {"deal_id", "verified_by", "source_reference", "source_status", "simulations", "hurdle_rate"}
+    allowed = DEAL_FIELDS | {
+        "deal_id",
+        "verified_by",
+        "source_reference",
+        "source_status",
+        "simulations",
+        "hurdle_rate",
+    }
     unknown = {field for field in payload if not field.startswith("_")} - allowed
     if unknown:
         raise ValueError(f"unknown fields: {', '.join(sorted(unknown))}")
@@ -54,7 +75,11 @@ def load_deal(path: Path) -> dict[str, Any]:
     if isinstance(simulations, bool) or not isinstance(simulations, int) or simulations <= 0:
         raise ValueError("simulations must be a positive integer")
     hurdle_rate = payload.get("hurdle_rate", 0.12)
-    if isinstance(hurdle_rate, bool) or not isinstance(hurdle_rate, int | float) or not math.isfinite(float(hurdle_rate)):
+    if (
+        isinstance(hurdle_rate, bool)
+        or not isinstance(hurdle_rate, int | float)
+        or not math.isfinite(float(hurdle_rate))
+    ):
         raise ValueError("hurdle_rate must be a finite number")
     if hurdle_rate < 0:
         raise ValueError("hurdle_rate cannot be negative")

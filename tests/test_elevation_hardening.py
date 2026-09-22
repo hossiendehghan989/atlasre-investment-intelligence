@@ -40,22 +40,22 @@ def test_negative_lease_growth_is_supported_without_negative_rent():
 
 
 def test_lease_derived_path_preserves_original_simplified_input():
-    original = DealInputs(10_000_000, 650_000, leverage=.50)
+    original = DealInputs(10_000_000, 650_000, leverage=0.50)
     lease_inputs = LeaseUnderwritingInputs(
         (Lease("Tenant", date(2025, 1, 1), date(2026, 12, 31), 1_200_000),),
         date(2025, 1, 1),
         months=12,
-        operating_expense_ratio=.20,
+        operating_expense_ratio=0.20,
     )
     result = underwrite_with_lease_roll(original, lease_inputs)
     assert original.annual_noi == 650_000
     assert result["lease_derived_annual_noi"] == pytest.approx(960_000)
-    assert result["underwriting"]["entry_cap_rate"] == pytest.approx(.096)
+    assert result["underwriting"]["entry_cap_rate"] == pytest.approx(0.096)
 
 
 def test_model_fingerprint_is_invariant_to_row_column_and_lineage_order():
     assumptions = versioned_assumptions(
-        {"purchase_price": (10_000_000, "USD"), "exit_cap_rate": (.06, "%")},
+        {"purchase_price": (10_000_000, "USD"), "exit_cap_rate": (0.06, "%")},
         deal_id="A",
         version=2,
         effective_at="2026-09-19",
@@ -69,11 +69,15 @@ def test_model_fingerprint_changes_for_material_assumption_change():
     base = versioned_assumptions({"purchase_price": (10_000_000, "USD")}, deal_id="A")
     changed = base.copy()
     changed.loc[0, "value"] = 10_250_000
-    assert model_run_fingerprint("v0.10", base, default_lineage()) != model_run_fingerprint("v0.10", changed, default_lineage())
+    assert model_run_fingerprint("v0.10", base, default_lineage()) != model_run_fingerprint(
+        "v0.10", changed, default_lineage()
+    )
 
 
 def test_unverified_package_cannot_display_an_initial_screen_pass():
-    files = build_screening_package(DealInputs(10_000_000, 650_000, leverage=.25), source_status="REVIEW REQUIRED", simulations=25)
+    files = build_screening_package(
+        DealInputs(10_000_000, 650_000, leverage=0.25), source_status="REVIEW REQUIRED", simulations=25
+    )
     report = files["investment_committee_report.md"].decode("utf-8")
     assert "Decision status | **PASSES INITIAL SCREEN** |" not in report
     assert "PASSES INITIAL SCREEN" not in report
@@ -81,12 +85,14 @@ def test_unverified_package_cannot_display_an_initial_screen_pass():
 
 def test_lease_path_package_has_traceable_lease_artifacts_and_lineage():
     lease_inputs = LeaseUnderwritingInputs(
-        (Lease("Tenant", date(2025, 1, 1), date(2027, 12, 31), 600_000, vacancy_assumption=.05),),
+        (Lease("Tenant", date(2025, 1, 1), date(2027, 12, 31), 600_000, vacancy_assumption=0.05),),
         date(2025, 1, 1),
         months=12,
-        operating_expense_ratio=.20,
+        operating_expense_ratio=0.20,
     )
-    files = build_screening_package(DealInputs(10_000_000, 650_000, leverage=.50), simulations=25, lease_inputs=lease_inputs)
+    files = build_screening_package(
+        DealInputs(10_000_000, 650_000, leverage=0.50), simulations=25, lease_inputs=lease_inputs
+    )
     report = files["investment_committee_report.md"].decode("utf-8")
     lineage = files["lineage.json"].decode("utf-8")
     assert {"lease_summary.csv", "lease_monthly_rollup.csv", "lease_annual_summary.csv"}.issubset(files)

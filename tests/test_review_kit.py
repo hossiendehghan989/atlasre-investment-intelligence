@@ -133,7 +133,14 @@ def test_verified_source_gate_requires_both_evidence(tmp_path):
 
 def test_cli_verified_source_gate_passes_only_with_both_evidence(tmp_path):
     payload = json.loads((ROOT / "docs/templates/deal_template.json").read_text())
-    payload.update({"simulations": 10, "source_status": "VERIFIED", "verified_by": "Owner reviewer", "source_reference": "local://source.pdf"})
+    payload.update(
+        {
+            "simulations": 10,
+            "source_status": "VERIFIED",
+            "verified_by": "Owner reviewer",
+            "source_reference": "local://source.pdf",
+        }
+    )
     input_path = tmp_path / "verified.json"
     input_path.write_text(json.dumps(payload))
     report = (run(input_path, tmp_path / "verified-review") / "investment_committee_report.md").read_text()
