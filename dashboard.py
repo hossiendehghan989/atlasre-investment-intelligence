@@ -23,6 +23,7 @@ def display_metric_or_na(value: float) -> float | str:
     """Keep portfolio display metrics tied to their own value, never a zero substitute."""
     return float(value) if math.isfinite(float(value)) else "N/A"
 
+
 st.set_page_config(page_title="AtlasRE | Deal Review", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown(
@@ -128,54 +129,142 @@ st.markdown("<div class='case-kicker'>Preliminary deal review</div>", unsafe_all
 header_left, header_right = st.columns([3, 1])
 with header_left:
     st.markdown("<div class='case-title'>Core-plus screening case</div>", unsafe_allow_html=True)
-    st.markdown("<div class='case-meta'>ATLAS-001 · initial pass · information still being checked</div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='case-meta'>ATLAS-001 · initial pass · information still being checked</div>",
+        unsafe_allow_html=True,
+    )
 with header_right:
     status_class = "status-pass" if screen["status"] == "PASSES INITIAL SCREEN" else "status-review"
-    st.markdown(f"<div style='text-align:right;margin-top:12px'><span class='{status_class}'>{screen['status']}</span></div>", unsafe_allow_html=True)
+    st.markdown(
+        f"<div style='text-align:right;margin-top:12px'><span class='{status_class}'>{screen['status']}</span></div>",
+        unsafe_allow_html=True,
+    )
 
 st.markdown("<div class='section-rule'></div>", unsafe_allow_html=True)
 
 st.markdown("## What needs attention")
 flags = pd.DataFrame(screen["flags"])
 flags = flags.rename(columns={"severity": "Level", "flag": "Issue", "evidence": "Evidence"})
-flags["Level"] = flags["Level"].replace({"GOVERNANCE": "GOVERNANCE", "CRITICAL": "CRITICAL", "HIGH": "HIGH", "INFO": "INFO"})
-st.dataframe(flags, use_container_width=True, hide_index=True, column_config={"Level": st.column_config.TextColumn(width="small"), "Issue": st.column_config.TextColumn(width="large"), "Evidence": st.column_config.TextColumn(width="medium")})
+flags["Level"] = flags["Level"].replace(
+    {"GOVERNANCE": "GOVERNANCE", "CRITICAL": "CRITICAL", "HIGH": "HIGH", "INFO": "INFO"}
+)
+st.dataframe(
+    flags,
+    use_container_width=True,
+    hide_index=True,
+    column_config={
+        "Level": st.column_config.TextColumn(width="small"),
+        "Issue": st.column_config.TextColumn(width="large"),
+        "Evidence": st.column_config.TextColumn(width="medium"),
+    },
+)
 st.caption("This case stays in review until the open items are resolved and the supporting information is confirmed.")
 
 st.markdown("## Downside first")
 downside_cols = st.columns(4)
-downside_cols[0].metric("Unlevered NPV", number_or_na(underwriting["unlevered_npv"], prefix="$"), help=metric_help(underwriting["unlevered_npv"], "NPV is not finite"))
-downside_cols[1].metric("Minimum DSCR", number_or_na(underwriting["minimum_dscr"], decimals=2, suffix="x"), help=metric_help(underwriting["minimum_dscr"], "DSCR is not defined"))
-downside_cols[2].metric("IRR in worst 10%", percent_or_na(risk["expected_shortfall_irr_10"], 1), help=metric_help(risk["expected_shortfall_irr_10"], "Risk-tail IRR is not defined"))
-downside_cols[3].metric("Chance of value loss", percent_or_na(risk["probability_negative_npv"], 1), help=metric_help(risk["probability_negative_npv"], "Probability is not defined"))
+downside_cols[0].metric(
+    "Unlevered NPV",
+    number_or_na(underwriting["unlevered_npv"], prefix="$"),
+    help=metric_help(underwriting["unlevered_npv"], "NPV is not finite"),
+)
+downside_cols[1].metric(
+    "Minimum DSCR",
+    number_or_na(underwriting["minimum_dscr"], decimals=2, suffix="x"),
+    help=metric_help(underwriting["minimum_dscr"], "DSCR is not defined"),
+)
+downside_cols[2].metric(
+    "IRR in worst 10%",
+    percent_or_na(risk["expected_shortfall_irr_10"], 1),
+    help=metric_help(risk["expected_shortfall_irr_10"], "Risk-tail IRR is not defined"),
+)
+downside_cols[3].metric(
+    "Chance of value loss",
+    percent_or_na(risk["probability_negative_npv"], 1),
+    help=metric_help(risk["probability_negative_npv"], "Probability is not defined"),
+)
 
 with st.expander("Risk tail detail", expanded=False):
     tail_left, tail_right = st.columns(2)
     with tail_left:
-        st.dataframe(pd.DataFrame({"Measure": ["P05 IRR", "P10 IRR", "Worst simulated IRR", "Probability IRR below hurdle"], "Value": [percent_or_na(risk["p05_irr"], 1), percent_or_na(risk["p10_irr"], 1), percent_or_na(risk["worst_irr"], 1), percent_or_na(risk["probability_irr_below_hurdle"], 1)]}), use_container_width=True, hide_index=True)
+        st.dataframe(
+            pd.DataFrame(
+                {
+                    "Measure": ["P05 IRR", "P10 IRR", "Worst simulated IRR", "Probability IRR below hurdle"],
+                    "Value": [
+                        percent_or_na(risk["p05_irr"], 1),
+                        percent_or_na(risk["p10_irr"], 1),
+                        percent_or_na(risk["worst_irr"], 1),
+                        percent_or_na(risk["probability_irr_below_hurdle"], 1),
+                    ],
+                }
+            ),
+            use_container_width=True,
+            hide_index=True,
+        )
     with tail_right:
-        st.dataframe(pd.DataFrame({"Measure": ["Expected shortfall NPV", "Probability DSCR < 1.25x", "Break-even exit cap", "Debt at exit"], "Value": [number_or_na(risk["expected_shortfall_npv_10"], prefix="$"), percent_or_na(risk["probability_dscr_below_125"], 1), percent_or_na(committee["break_even_exit_cap"]), number_or_na(underwriting["remaining_debt_at_exit"], prefix="$" )]}), use_container_width=True, hide_index=True)
+        st.dataframe(
+            pd.DataFrame(
+                {
+                    "Measure": [
+                        "Expected shortfall NPV",
+                        "Probability DSCR < 1.25x",
+                        "Break-even exit cap",
+                        "Debt at exit",
+                    ],
+                    "Value": [
+                        number_or_na(risk["expected_shortfall_npv_10"], prefix="$"),
+                        percent_or_na(risk["probability_dscr_below_125"], 1),
+                        percent_or_na(committee["break_even_exit_cap"]),
+                        number_or_na(underwriting["remaining_debt_at_exit"], prefix="$"),
+                    ],
+                }
+            ),
+            use_container_width=True,
+            hide_index=True,
+        )
 
 st.markdown("## Current case")
 base_cols = st.columns(5)
 base_cols[0].metric("Entry cap", percent_or_na(underwriting["entry_cap_rate"]))
-base_cols[1].metric("Levered IRR", percent_or_na(underwriting["levered_irr"]), help=metric_help(underwriting["levered_irr"], "IRR did not converge"))
-base_cols[2].metric("Unlevered IRR", percent_or_na(underwriting["unlevered_irr"]), help=metric_help(underwriting["unlevered_irr"], "IRR did not converge"))
-base_cols[3].metric("Equity multiple", number_or_na(underwriting["equity_multiple"], decimals=2, suffix="x"), help=metric_help(underwriting["equity_multiple"], "Equity multiple is not defined"))
-base_cols[4].metric("Exit value", number_or_na(underwriting["exit_value"], prefix="$"), help=metric_help(underwriting["exit_value"], "Exit value is not finite"))
+base_cols[1].metric(
+    "Levered IRR",
+    percent_or_na(underwriting["levered_irr"]),
+    help=metric_help(underwriting["levered_irr"], "IRR did not converge"),
+)
+base_cols[2].metric(
+    "Unlevered IRR",
+    percent_or_na(underwriting["unlevered_irr"]),
+    help=metric_help(underwriting["unlevered_irr"], "IRR did not converge"),
+)
+base_cols[3].metric(
+    "Equity multiple",
+    number_or_na(underwriting["equity_multiple"], decimals=2, suffix="x"),
+    help=metric_help(underwriting["equity_multiple"], "Equity multiple is not defined"),
+)
+base_cols[4].metric(
+    "Exit value",
+    number_or_na(underwriting["exit_value"], prefix="$"),
+    help=metric_help(underwriting["exit_value"], "Exit value is not finite"),
+)
 
 st.markdown("<div class='section-rule'></div>", unsafe_allow_html=True)
-tab_screen, tab_returns, tab_debt, tab_portfolio, tab_audit = st.tabs(["Review note", "Returns", "Debt / rent roll", "Portfolio fit", "Inputs & record"])
+tab_screen, tab_returns, tab_debt, tab_portfolio, tab_audit = st.tabs(
+    ["Review note", "Returns", "Debt / rent roll", "Portfolio fit", "Inputs & record"]
+)
 review_memo = generate_ic_memo(current_case, hurdle, model_version=MODEL_VERSION, risk_metrics=risk)
 
 with tab_screen:
     left, right = st.columns([2, 1])
     with left:
         st.markdown("### Review note")
-        st.write("The case remains at preliminary screening. The current return profile is conditional on the operating assumptions, terminal value, financing terms, and source package. Resolve the governance flag before treating the economic outputs as decision-ready.")
+        st.write(
+            "The case remains at preliminary screening. The current return profile is conditional on the operating assumptions, terminal value, financing terms, and source package. Resolve the governance flag before treating the economic outputs as decision-ready."
+        )
         st.info(review_focus)
         st.markdown("### Next diligence")
-        st.write("Reconcile the rent roll and operating statement. Validate the exit-cap evidence and terminal-value timing. Obtain the financing term sheet and review covenants, fees, amortization, and maturity.")
+        st.write(
+            "Reconcile the rent roll and operating statement. Validate the exit-cap evidence and terminal-value timing. Obtain the financing term sheet and review covenants, fees, amortization, and maturity."
+        )
         with st.expander("Preview review memo", expanded=False):
             st.markdown(review_memo)
     with right:
@@ -196,7 +285,13 @@ with tab_screen:
                 package_status.update(label="Review files ready", state="complete", expanded=False)
             st.session_state["review_package_key"] = package_key
         if st.session_state.get("review_package_key") == package_key and "review_package" in st.session_state:
-            st.download_button("Download review files", st.session_state["review_package"], file_name="atlasre-deal-review.zip", mime="application/zip", use_container_width=True)
+            st.download_button(
+                "Download review files",
+                st.session_state["review_package"],
+                file_name="atlasre-deal-review.zip",
+                mime="application/zip",
+                use_container_width=True,
+            )
         st.download_button(
             "Download Excel reconciliation",
             build_excel_download(base_deal, hurdle),
@@ -215,12 +310,49 @@ with tab_screen:
 with tab_returns:
     st.markdown("### Stress cases")
     stress = stress_test(base_deal)
-    st.dataframe(stress.style.format({"levered_irr": "{:.1%}", "unlevered_irr": "{:.1%}", "npv": "${:,.0f}", "exit_value": "${:,.0f}", "minimum_dscr": "{:.2f}x"}), use_container_width=True, hide_index=True)
+    st.dataframe(
+        stress.style.format(
+            {
+                "levered_irr": "{:.1%}",
+                "unlevered_irr": "{:.1%}",
+                "npv": "${:,.0f}",
+                "exit_value": "${:,.0f}",
+                "minimum_dscr": "{:.2f}x",
+            }
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
     st.markdown("### Exit cap sensitivity")
     sensitivity = sensitivity_table(base_deal, "exit_cap_rate", [0.05, 0.055, 0.06, 0.065, 0.07])
-    st.dataframe(sensitivity.style.format({"exit_cap_rate": "{:.1%}", "levered_irr": "{:.1%}", "unlevered_npv": "${:,.0f}", "minimum_dscr": "{:.2f}x", "exit_value": "${:,.0f}"}), use_container_width=True, hide_index=True)
+    st.dataframe(
+        sensitivity.style.format(
+            {
+                "exit_cap_rate": "{:.1%}",
+                "levered_irr": "{:.1%}",
+                "unlevered_npv": "${:,.0f}",
+                "minimum_dscr": "{:.2f}x",
+                "exit_value": "${:,.0f}",
+            }
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
     with st.expander("Scenario grid", expanded=False):
-        st.dataframe(scenario_matrix(base_deal).style.format({"noi_growth": "{:.1%}", "exit_cap_rate": "{:.1%}", "levered_irr": "{:.1%}", "unlevered_irr": "{:.1%}", "exit_value": "${:,.0f}", "npv": "${:,.0f}"}), use_container_width=True, hide_index=True)
+        st.dataframe(
+            scenario_matrix(base_deal).style.format(
+                {
+                    "noi_growth": "{:.1%}",
+                    "exit_cap_rate": "{:.1%}",
+                    "levered_irr": "{:.1%}",
+                    "unlevered_irr": "{:.1%}",
+                    "exit_value": "${:,.0f}",
+                    "npv": "${:,.0f}",
+                }
+            ),
+            use_container_width=True,
+            hide_index=True,
+        )
 
 with tab_debt:
     st.markdown("### Debt schedule")
@@ -232,26 +364,73 @@ with tab_debt:
     debt_cols[1].metric("Binding constraint", constrained["binding_constraint"])
     debt_cols[2].metric("Implied LTV", f"{constrained['implied_ltv']:.1%}")
     schedule = monthly_debt_schedule(constrained["recommended_loan"], terms, noi=monthly_noi)
-    st.dataframe(schedule.tail(12).style.format({"beginning_balance": "${:,.0f}", "interest": "${:,.0f}", "scheduled_payment": "${:,.0f}", "principal_paid": "${:,.0f}", "ending_balance": "${:,.0f}", "balloon_payoff": "${:,.0f}", "dscr": "{:.2f}x"}), use_container_width=True, hide_index=True)
+    st.dataframe(
+        schedule.tail(12).style.format(
+            {
+                "beginning_balance": "${:,.0f}",
+                "interest": "${:,.0f}",
+                "scheduled_payment": "${:,.0f}",
+                "principal_paid": "${:,.0f}",
+                "ending_balance": "${:,.0f}",
+                "balloon_payoff": "${:,.0f}",
+                "dscr": "{:.2f}x",
+            }
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
 
     st.markdown("### Lease reference")
     demo_leases = illustrative_rent_roll()
-    lease_inputs = LeaseUnderwritingInputs(tuple(demo_leases), demo_leases[0].start, months=24, operating_expense_ratio=.20)
+    lease_inputs = LeaseUnderwritingInputs(
+        tuple(demo_leases), demo_leases[0].start, months=24, operating_expense_ratio=0.20
+    )
     lease_case = underwrite_with_lease_roll(base_deal, lease_inputs)
     st.caption("This rent roll is a reference schedule only. It does not replace source-backed lease review.")
     lease_cols = st.columns(3)
     lease_cols[0].metric("Lease-derived annual NOI", f"${lease_case['lease_derived_annual_noi']:,.0f}")
     lease_cols[1].metric("Lease-path IRR", percent_or_na(lease_case["underwriting"]["levered_irr"], 1))
-    lease_cols[2].metric("Lease-path DSCR", number_or_na(lease_case["underwriting"]["minimum_dscr"], decimals=2, suffix="x"))
-    st.dataframe(lease_summary(demo_leases).style.format({"annual_rent": "${:,.0f}", "annual_escalation": "{:.1%}", "vacancy_assumption": "{:.1%}", "rollover_rent_change": "{:.1%}"}), use_container_width=True, hide_index=True)
+    lease_cols[2].metric(
+        "Lease-path DSCR", number_or_na(lease_case["underwriting"]["minimum_dscr"], decimals=2, suffix="x")
+    )
+    st.dataframe(
+        lease_summary(demo_leases).style.format(
+            {
+                "annual_rent": "${:,.0f}",
+                "annual_escalation": "{:.1%}",
+                "vacancy_assumption": "{:.1%}",
+                "rollover_rent_change": "{:.1%}",
+            }
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
 
 with tab_portfolio:
     st.markdown("### Allocation check")
     ranked = rank_markets(pd.read_csv(ROOT / "data" / "market_inputs.csv"))
-    portfolio_deals = pd.DataFrame([
-        {"asset": "Core-plus logistics · Dubai", "equity_required": underwriting["equity_required"], "risk_adjusted_score": float(ranked.iloc[0]["risk_adjusted_score"]), "levered_irr": display_metric_or_na(underwriting["levered_irr"]), "minimum_dscr": display_metric_or_na(underwriting["minimum_dscr"])},
-        {"asset": "Residential value-add · London", "equity_required": underwriting["equity_required"] * 0.8, "risk_adjusted_score": float(ranked.iloc[1]["risk_adjusted_score"]), "levered_irr": display_metric_or_na(underwriting["levered_irr"] - 0.015) if math.isfinite(float(underwriting["levered_irr"])) else "N/A", "minimum_dscr": display_metric_or_na(underwriting["minimum_dscr"] - 0.05) if math.isfinite(float(underwriting["minimum_dscr"])) else "N/A"},
-    ])
+    portfolio_deals = pd.DataFrame(
+        [
+            {
+                "asset": "Core-plus logistics · Dubai",
+                "equity_required": underwriting["equity_required"],
+                "risk_adjusted_score": float(ranked.iloc[0]["risk_adjusted_score"]),
+                "levered_irr": display_metric_or_na(underwriting["levered_irr"]),
+                "minimum_dscr": display_metric_or_na(underwriting["minimum_dscr"]),
+            },
+            {
+                "asset": "Residential value-add · London",
+                "equity_required": underwriting["equity_required"] * 0.8,
+                "risk_adjusted_score": float(ranked.iloc[1]["risk_adjusted_score"]),
+                "levered_irr": display_metric_or_na(underwriting["levered_irr"] - 0.015)
+                if math.isfinite(float(underwriting["levered_irr"]))
+                else "N/A",
+                "minimum_dscr": display_metric_or_na(underwriting["minimum_dscr"] - 0.05)
+                if math.isfinite(float(underwriting["minimum_dscr"]))
+                else "N/A",
+            },
+        ]
+    )
     capital = st.number_input("Available equity ($)", min_value=1_000_000, value=25_000_000, step=1_000_000)
     try:
         snapshot = portfolio_snapshot(portfolio_deals, capital)
@@ -265,8 +444,22 @@ with tab_portfolio:
         pcols[1].metric("Allocated equity", f"${snapshot['allocated_equity']:,.0f}")
         pcols[2].metric("Unallocated", f"${snapshot['unallocated_equity']:,.0f}")
         pcols[3].metric("Concentration HHI", f"{snapshot['concentration_hhi']:.3f}")
-        st.dataframe(allocation.style.format({"equity_required": "${:,.0f}", "risk_adjusted_score": "{:.1f}", "levered_irr": "{:.1%}", "minimum_dscr": "{:.2f}x", "recommended_allocation": "${:,.0f}"}), use_container_width=True, hide_index=True)
-        st.caption(f"DSCR-breach exposure: {portfolio_risk['dscr_breach_exposure']:.1%} · Negative-IRR exposure: {portfolio_risk['negative_irr_exposure']:.1%}")
+        st.dataframe(
+            allocation.style.format(
+                {
+                    "equity_required": "${:,.0f}",
+                    "risk_adjusted_score": "{:.1f}",
+                    "levered_irr": "{:.1%}",
+                    "minimum_dscr": "{:.2f}x",
+                    "recommended_allocation": "${:,.0f}",
+                }
+            ),
+            use_container_width=True,
+            hide_index=True,
+        )
+        st.caption(
+            f"DSCR-breach exposure: {portfolio_risk['dscr_breach_exposure']:.1%} · Negative-IRR exposure: {portfolio_risk['negative_irr_exposure']:.1%}"
+        )
 
 with tab_audit:
     st.markdown("### Inputs and run record")
@@ -284,10 +477,37 @@ with tab_audit:
     st.dataframe(assumptions, use_container_width=True, hide_index=True)
     with st.expander("Lineage", expanded=False):
         st.json(default_lineage())
-        st.download_button("Download lineage JSON", lineage_json(default_lineage()), file_name="atlasre-lineage.json", mime="application/json")
-    comparison_case = DealCase("ATLAS-002", "Higher-growth challenge case", DealInputs(price * 1.05, noi * 1.08, hold, growth + 0.01, exit_cap - 0.005, hurdle - 0.02, 0.03, 0.02, leverage))
+        st.download_button(
+            "Download lineage JSON",
+            lineage_json(default_lineage()),
+            file_name="atlasre-lineage.json",
+            mime="application/json",
+        )
+    comparison_case = DealCase(
+        "ATLAS-002",
+        "Higher-growth challenge case",
+        DealInputs(
+            price * 1.05, noi * 1.08, hold, growth + 0.01, exit_cap - 0.005, hurdle - 0.02, 0.03, 0.02, leverage
+        ),
+    )
     with st.expander("Challenge case", expanded=False):
-        st.dataframe(compare_deals([current_case, comparison_case], hurdle).style.format({"entry_cap": "{:.2%}", "levered_irr": "{:.2%}", "unlevered_irr": "{:.2%}", "equity_multiple": "{:.2f}x", "minimum_dscr": "{:.2f}x", "unlevered_npv": "${:,.0f}"}), use_container_width=True, hide_index=True)
+        st.dataframe(
+            compare_deals([current_case, comparison_case], hurdle).style.format(
+                {
+                    "entry_cap": "{:.2%}",
+                    "levered_irr": "{:.2%}",
+                    "unlevered_irr": "{:.2%}",
+                    "equity_multiple": "{:.2f}x",
+                    "minimum_dscr": "{:.2f}x",
+                    "unlevered_npv": "${:,.0f}",
+                }
+            ),
+            use_container_width=True,
+            hide_index=True,
+        )
 
 st.markdown("<div class='section-rule'></div>", unsafe_allow_html=True)
-st.markdown("<div class='small-note'>Internal working paper. Figures are subject to confirmation and are not investment advice.</div>", unsafe_allow_html=True)
+st.markdown(
+    "<div class='small-note'>Internal working paper. Figures are subject to confirmation and are not investment advice.</div>",
+    unsafe_allow_html=True,
+)

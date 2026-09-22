@@ -1,4 +1,5 @@
 """Generate a deterministic, downside-first Investment Committee screening package."""
+
 from __future__ import annotations
 
 import json
@@ -41,11 +42,13 @@ def _assumption_values(deal: DealInputs, lease_inputs: LeaseUnderwritingInputs |
         "hold_years": (deal.hold_years, "years"),
     }
     if lease_inputs is not None:
-        values.update({
-            "lease_rollup_months": (lease_inputs.months, "months"),
-            "lease_operating_expense_ratio": (lease_inputs.operating_expense_ratio, "%"),
-            "lease_count": (len(lease_inputs.leases), "leases"),
-        })
+        values.update(
+            {
+                "lease_rollup_months": (lease_inputs.months, "months"),
+                "lease_operating_expense_ratio": (lease_inputs.operating_expense_ratio, "%"),
+                "lease_count": (len(lease_inputs.leases), "leases"),
+            }
+        )
     return values
 
 
@@ -56,11 +59,16 @@ def _diligence_steps(lease_inputs: LeaseUnderwritingInputs | None) -> str:
         "Obtain and review the financing term sheet, including covenants, fees, amortization, and maturity.",
     ]
     if lease_inputs is not None:
-        steps.insert(0, "Reconcile every rent-roll field, expiry, vacancy, rollover, and credit-quality label to source documents.")
-    steps.extend([
-        "Validate title, legal, tax, engineering, environmental, and insurance diligence.",
-        "Replace illustrative assumptions with versioned, reviewer-verified inputs and regenerate this package.",
-    ])
+        steps.insert(
+            0,
+            "Reconcile every rent-roll field, expiry, vacancy, rollover, and credit-quality label to source documents.",
+        )
+    steps.extend(
+        [
+            "Validate title, legal, tax, engineering, environmental, and insurance diligence.",
+            "Replace illustrative assumptions with versioned, reviewer-verified inputs and regenerate this package.",
+        ]
+    )
     return "\n".join(f"{index}. {step}" for index, step in enumerate(steps, start=1))
 
 
@@ -84,7 +92,7 @@ def build_screening_package(
     case_deal = deal
     lease_files: dict[str, bytes] = {}
     reference_leases = illustrative_rent_roll()
-    reference_rollup = lease_rollup(reference_leases, reference_leases[0].start, 12, operating_expense_ratio=.20)
+    reference_rollup = lease_rollup(reference_leases, reference_leases[0].start, 12, operating_expense_ratio=0.20)
     lease_note = (
         "No rent-roll input was supplied. The economic case uses the explicit simplified annual-NOI assumption. "
         "The included lease files are a clearly illustrative reference schedule, not source data."
@@ -135,19 +143,23 @@ def build_screening_package(
         _assumption_values(deal, lease_inputs),
         deal_id=deal_id,
         version=1,
-        source="Source-backed screening input" if effective_source_status == "VERIFIED" else "Illustrative dashboard input",
+        source="Source-backed screening input"
+        if effective_source_status == "VERIFIED"
+        else "Illustrative dashboard input",
         verified_by=verified_by if effective_source_status == "VERIFIED" else "",
     )
     lineage = default_lineage()
     if lease_inputs is not None:
-        lineage.append({
-            "output": "annual_noi",
-            "value": "derived",
-            "inputs": ["lease_rollup_months", "lease_operating_expense_ratio", "lease_count"],
-            "method": "sum monthly lease NOI / supplied months x 12",
-            "source_refs": ["lease_summary.csv", "lease_monthly_rollup.csv"],
-            "assumption_version": 1,
-        })
+        lineage.append(
+            {
+                "output": "annual_noi",
+                "value": "derived",
+                "inputs": ["lease_rollup_months", "lease_operating_expense_ratio", "lease_count"],
+                "method": "sum monthly lease NOI / supplied months x 12",
+                "source_refs": ["lease_summary.csv", "lease_monthly_rollup.csv"],
+                "assumption_version": 1,
+            }
+        )
     fingerprint = model_run_fingerprint(model_version, assumptions, lineage)
     committee = investment_committee_summary(case_deal, hurdle_rate=hurdle_rate)
     memo = "# ILLUSTRATIVE — generated from the current package inputs\n\n" + generate_ic_memo(
@@ -171,7 +183,7 @@ def build_screening_package(
 | --- | --- |
 | Deal ID | `{escape(deal_id)}` |
 | Source status | **{effective_source_status}** |
-| Decision status | **{screen['status']}** |
+| Decision status | **{screen["status"]}** |
 | Model version | `{model_version}` |
 | Model-run fingerprint | `{fingerprint}` |
 
@@ -200,27 +212,27 @@ def build_screening_package(
 
 | Metric | Result |
 | --- | ---: |
-| Entry cap rate | {percent_or_na_report(underwriting['entry_cap_rate'])} |
-| Levered IRR | {percent_or_na_report(underwriting['levered_irr'], reason='IRR did not converge')} |
-| Unlevered IRR | {percent_or_na_report(underwriting['unlevered_irr'], reason='IRR did not converge')} |
-| Equity multiple | {number_or_na_report(underwriting['equity_multiple'], decimals=2, suffix='x', reason='Equity multiple is not defined')} |
-| Minimum DSCR | {number_or_na_report(underwriting['minimum_dscr'], decimals=2, suffix='x', reason='DSCR is not defined')} |
-| Unlevered NPV | {number_or_na_report(underwriting['unlevered_npv'], prefix='$', reason='NPV is not finite')} |
-| Remaining debt at exit | {number_or_na_report(underwriting['remaining_debt_at_exit'], prefix='$', reason='Remaining debt is not finite')} |
-| Break-even exit cap at 12% hurdle | {percent_or_na(committee['break_even_exit_cap'])} |
+| Entry cap rate | {percent_or_na_report(underwriting["entry_cap_rate"])} |
+| Levered IRR | {percent_or_na_report(underwriting["levered_irr"], reason="IRR did not converge")} |
+| Unlevered IRR | {percent_or_na_report(underwriting["unlevered_irr"], reason="IRR did not converge")} |
+| Equity multiple | {number_or_na_report(underwriting["equity_multiple"], decimals=2, suffix="x", reason="Equity multiple is not defined")} |
+| Minimum DSCR | {number_or_na_report(underwriting["minimum_dscr"], decimals=2, suffix="x", reason="DSCR is not defined")} |
+| Unlevered NPV | {number_or_na_report(underwriting["unlevered_npv"], prefix="$", reason="NPV is not finite")} |
+| Remaining debt at exit | {number_or_na_report(underwriting["remaining_debt_at_exit"], prefix="$", reason="Remaining debt is not finite")} |
+| Break-even exit cap at 12% hurdle | {percent_or_na(committee["break_even_exit_cap"])} |
 
 ## 6. Risk tails and covenant review
 
 | Risk metric | Result |
 | --- | ---: |
-| P05 levered IRR | {risk_percent('p05_irr')} |
-| P10 levered IRR | {risk_percent('p10_irr')} |
-| Expected shortfall, worst 10% IRR | {risk_percent('expected_shortfall_irr_10')} |
-| Expected shortfall, worst 10% NPV | {risk_number('expected_shortfall_npv_10')} |
-| Worst simulated IRR | {risk_percent('worst_irr')} |
-| Probability IRR below hurdle | {risk_percent('probability_irr_below_hurdle')} |
-| Probability negative NPV | {risk_percent('probability_negative_npv')} |
-| Probability DSCR below 1.25x | {risk_percent('probability_dscr_below_125')} |
+| P05 levered IRR | {risk_percent("p05_irr")} |
+| P10 levered IRR | {risk_percent("p10_irr")} |
+| Expected shortfall, worst 10% IRR | {risk_percent("expected_shortfall_irr_10")} |
+| Expected shortfall, worst 10% NPV | {risk_number("expected_shortfall_npv_10")} |
+| Worst simulated IRR | {risk_percent("worst_irr")} |
+| Probability IRR below hurdle | {risk_percent("probability_irr_below_hurdle")} |
+| Probability negative NPV | {risk_percent("probability_negative_npv")} |
+| Probability DSCR below 1.25x | {risk_percent("probability_dscr_below_125")} |
 
 ## 7. Lease-level evidence
 
