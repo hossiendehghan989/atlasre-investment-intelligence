@@ -74,7 +74,10 @@ def run(path: Path, output: Path) -> Path:
         simulations=payload.get("simulations", 5000),
         hurdle_rate=float(payload.get("hurdle_rate", 0.12)),
     )
-    output.mkdir(parents=True, exist_ok=True)
+    try:
+        output.mkdir(parents=True, exist_ok=False)
+    except FileExistsError as exc:
+        raise ValueError(f"output directory already exists: {output}") from exc
     for name, content in files.items():
         (output / name).write_bytes(content)
     return output
