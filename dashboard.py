@@ -6,7 +6,7 @@ import streamlit as st
 
 from generate_committee_report import DEFAULT_RISK_SIMULATIONS, MODEL_VERSION, screening_package_zip
 from src.advanced_underwriting import monte_carlo_underwriting, risk_summary, stress_test
-from src.atlasre import DealInputs, rank_markets, scenario_matrix, underwrite_deal
+from src.atlasre import DealInputs, rank_markets, scenario_matrix, underwrite_deal, validate_deal
 from src.committee_analytics import investment_committee_summary, sensitivity_table
 from src.debt import DebtTerms, monthly_debt_schedule, size_debt_from_constraints
 from src.governance import default_lineage, lineage_json, model_run_fingerprint, versioned_assumptions
@@ -90,6 +90,11 @@ with st.sidebar:
     st.caption("Change the assumptions to test the case. Confirm figures before circulation.")
 
 base_deal = DealInputs(price, noi, hold, growth, exit_cap, hurdle - 0.02, 0.03, 0.02, leverage)
+try:
+    validate_deal(base_deal)
+except ValueError as exc:
+    st.error(f"Invalid deal assumptions: {exc}")
+    st.stop()
 underwriting = underwrite_deal(base_deal)
 committee = investment_committee_summary(base_deal, hurdle)
 current_case = DealCase("ATLAS-001", "Core-plus screening case", base_deal, "REVIEW REQUIRED")
@@ -153,11 +158,11 @@ with st.expander("Risk tail detail", expanded=False):
 
 st.markdown("## Current case")
 base_cols = st.columns(5)
-base_cols[0].metric("Entry cap", f"{underwriting['entry_cap_rate']:.2%}")
-base_cols[1].metric("Levered IRR", f"{underwriting['levered_irr']:.2%}")
-base_cols[2].metric("Unlevered IRR", f"{underwriting['unlevered_irr']:.2%}")
-base_cols[3].metric("Equity multiple", f"{underwriting['equity_multiple']:.2f}x")
-base_cols[4].metric("Exit value", f"${underwriting['exit_value']:,.0f}")
+base_cols[0].metric("Entry cap", percent_or_na(underwriting["entry_cap_rate"]))
+base_cols[1].metric("Levered IRR", percent_or_na(underwriting["levered_irr"]))
+base_cols[2].metric("Unlevered IRR", percent_or_na(underwriting["unlevered_irr"]))
+base_cols[3].metric("Equity multiple", number_or_na(underwriting["equity_multiple"], decimals=2, suffix="x"))
+base_cols[4].metric("Exit value", number_or_na(underwriting["exit_value"], prefix="$"))
 
 st.markdown("<div class='section-rule'></div>", unsafe_allow_html=True)
 tab_screen, tab_returns, tab_debt, tab_portfolio, tab_audit = st.tabs(["Review note", "Returns", "Debt / rent roll", "Portfolio fit", "Inputs & record"])
@@ -236,7 +241,7 @@ with tab_debt:
     st.caption("This rent roll is a reference schedule only. It does not replace source-backed lease review.")
     lease_cols = st.columns(3)
     lease_cols[0].metric("Lease-derived annual NOI", f"${lease_case['lease_derived_annual_noi']:,.0f}")
-    lease_cols[1].metric("Lease-path IRR", f"{lease_case['underwriting']['levered_irr']:.1%}")
+    lease_cols[1].metric("Lease-path IRR", percent_or_na(lease_case["underwriting"]["levered_irr"], 1))
     lease_cols[2].metric("Lease-path DSCR", number_or_na(lease_case["underwriting"]["minimum_dscr"], decimals=2, suffix="x"))
     st.dataframe(lease_summary(demo_leases).style.format({"annual_rent": "${:,.0f}", "annual_escalation": "{:.1%}", "vacancy_assumption": "{:.1%}", "rollover_rent_change": "{:.1%}"}), use_container_width=True, hide_index=True)
 
@@ -248,16 +253,20 @@ with tab_portfolio:
         {"asset": "Residential value-add · London", "equity_required": underwriting["equity_required"] * 0.8, "risk_adjusted_score": float(ranked.iloc[1]["risk_adjusted_score"]), "levered_irr": finite_or_zero(underwriting["levered_irr"]) - 0.015, "minimum_dscr": finite_or_zero(underwriting["minimum_dscr"]) - 0.05},
     ])
     capital = st.number_input("Available equity ($)", min_value=1_000_000, value=25_000_000, step=1_000_000)
-    snapshot = portfolio_snapshot(portfolio_deals, capital)
-    pcols = st.columns(4)
-    pcols[0].metric("Eligible assets", f"{int(snapshot['eligible_assets'])}")
-    pcols[1].metric("Allocated equity", f"${snapshot['allocated_equity']:,.0f}")
-    pcols[2].metric("Unallocated", f"${snapshot['unallocated_equity']:,.0f}")
-    pcols[3].metric("Concentration HHI", f"{snapshot['concentration_hhi']:.3f}")
-    allocation = portfolio_allocation(portfolio_deals, capital)
-    st.dataframe(allocation.style.format({"equity_required": "${:,.0f}", "risk_adjusted_score": "{:.1f}", "levered_irr": "{:.1%}", "minimum_dscr": "{:.2f}x", "recommended_allocation": "${:,.0f}"}), use_container_width=True, hide_index=True)
-    portfolio_risk = portfolio_risk_view(allocation)
-    st.caption(f"DSCR-breach exposure: {portfolio_risk['dscr_breach_exposure']:.1%} · Negative-IRR exposure: {portfolio_risk['negative_irr_exposure']:.1%}")
+    try:
+        snapshot = portfolio_snapshot(portfolio_deals, capital)
+        allocation = portfolio_allocation(portfolio_deals, capital)
+        portfolio_risk = portfolio_risk_view(allocation)
+    except ValueError as exc:
+        st.error(f"Invalid portfolio assumptions: {exc}")
+    else:
+        pcols = st.columns(4)
+        pcols[0].metric("Eligible assets", f"{int(snapshot['eligible_assets'])}")
+        pcols[1].metric("Allocated equity", f"${snapshot['allocated_equity']:,.0f}")
+        pcols[2].metric("Unallocated", f"${snapshot['unallocated_equity']:,.0f}")
+        pcols[3].metric("Concentration HHI", f"{snapshot['concentration_hhi']:.3f}")
+        st.dataframe(allocation.style.format({"equity_required": "${:,.0f}", "risk_adjusted_score": "{:.1f}", "levered_irr": "{:.1%}", "minimum_dscr": "{:.2f}x", "recommended_allocation": "${:,.0f}"}), use_container_width=True, hide_index=True)
+        st.caption(f"DSCR-breach exposure: {portfolio_risk['dscr_breach_exposure']:.1%} · Negative-IRR exposure: {portfolio_risk['negative_irr_exposure']:.1%}")
 
 with tab_audit:
     st.markdown("### Inputs and run record")

@@ -9,6 +9,10 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import brentq
 
+MAX_CURRENCY_INPUT = 100_000_000_000_000
+MAX_HOLD_YEARS = 100
+MAX_AMORTIZATION_YEARS = 100
+
 
 @dataclass(frozen=True)
 class DealInputs:
@@ -35,14 +39,20 @@ def validate_deal(deal: DealInputs) -> None:
         _finite(getattr(deal, name), name)
     if deal.purchase_price <= 0 or deal.annual_noi <= 0:
         raise ValueError("purchase_price and annual_noi must be positive")
+    if deal.purchase_price > MAX_CURRENCY_INPUT or deal.annual_noi > MAX_CURRENCY_INPUT:
+        raise ValueError(f"purchase_price and annual_noi must not exceed {MAX_CURRENCY_INPUT:g}")
     if deal.hold_years < 1 or deal.debt_amortization_years < 1:
         raise ValueError("hold_years and debt_amortization_years must be positive")
-    if deal.annual_noi_growth <= -1 or deal.exit_cap_rate <= 0 or deal.discount_rate < 0:
-        raise ValueError("growth must be above -100%; exit cap must be positive; discount rate cannot be negative")
+    if deal.hold_years > MAX_HOLD_YEARS or deal.debt_amortization_years > MAX_AMORTIZATION_YEARS:
+        raise ValueError(f"hold_years and debt_amortization_years must not exceed {MAX_HOLD_YEARS}")
+    if deal.annual_noi_growth <= -1 or deal.annual_noi_growth > 1:
+        raise ValueError("growth must be above -100% and no greater than 100%")
+    if not 0 < deal.exit_cap_rate <= 1 or not 0 <= deal.discount_rate <= 1 or not 0 <= deal.debt_rate <= 1:
+        raise ValueError("exit cap must be in (0, 1]; discount rate and debt rate must be in [0, 1]")
     if not 0 <= deal.acquisition_cost_pct <= 1 or not 0 <= deal.selling_cost_pct <= 1:
         raise ValueError("transaction cost percentages must be between 0 and 1")
-    if not 0 <= deal.leverage < 1 or deal.debt_rate < 0:
-        raise ValueError("leverage must be in [0, 1) and debt rate cannot be negative")
+    if not 0 <= deal.leverage < 1:
+        raise ValueError("leverage must be in [0, 1)")
 
 
 def _npv(rate: float, cash_flows: np.ndarray) -> float:
@@ -69,7 +79,7 @@ def _irr(cash_flows: Iterable[float]) -> float:
     for left, right, left_value, right_value in zip(rates[:-1], rates[1:], values[:-1], values[1:]):
         if left_value == 0:
             return float(left)
-        if np.isfinite(left_value) and np.isfinite(right_value) and left_value * right_value < 0:
+        if np.isfinite(left_value) and np.isfinite(right_value) and np.signbit(left_value) != np.signbit(right_value):
             return float(brentq(lambda rate: _npv(rate, flows), float(left), float(right)))
     return float("nan")
 

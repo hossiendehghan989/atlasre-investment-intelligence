@@ -124,3 +124,28 @@ def test_reconciliation_differences_pass_after_libreoffice_recalculation():
         tolerance = reconciliation.cell(row, 5).value
         assert reconciliation.cell(row, 6).value == "PASS"
         assert abs(float(difference)) <= float(tolerance)
+
+
+@pytest.mark.skipif(OFFICE is None, reason="LibreOffice is not available in this environment")
+def test_long_hold_workbook_recalculates_after_debt_amortization():
+    deal = DealInputs(10_000_000, 650_000, hold_years=25, leverage=0.5, debt_amortization_years=20)
+    with TemporaryDirectory() as temporary_directory:
+        temporary_path = Path(temporary_directory)
+        source = temporary_path / "long-hold.xlsx"
+        recalculated = temporary_path / "recalculated"
+        recalculated.mkdir()
+        source.write_bytes(build_reconciliation_workbook(deal))
+        run(
+            [OFFICE, "--headless", "--convert-to", "xlsx", "--outdir", str(recalculated), str(source)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        workbook = load_workbook(recalculated / source.name, data_only=True)
+
+    debt_schedule = workbook["Debt Schedule"]
+    first_post_amortization_row = 4 + 20 * 12
+    assert debt_schedule.cell(first_post_amortization_row, 5).value == 0
+    assert debt_schedule.cell(first_post_amortization_row, 6).value == 0
+    assert debt_schedule.cell(first_post_amortization_row, 7).value == 0
+    assert all(workbook["Reconciliation"].cell(row, 6).value == "PASS" for row in range(4, 12))
