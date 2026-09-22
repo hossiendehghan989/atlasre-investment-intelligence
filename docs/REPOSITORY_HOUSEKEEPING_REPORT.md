@@ -91,7 +91,7 @@ All **39 local inline links** in `README.md` and the recursive `docs/` Markdown 
 | `3d3637b` | Added the documentation index and historical labels. | Markdown link validation, `ruff check .`, and 131 tests passed. |
 | `2bc1aec` | Clarified and aligned dependency manifests. | Fresh locked environment passed formatting, lint, and 131 tests. |
 
-The branch has not yet been pushed or merged while this report is being prepared. The final PR URL, CI run URL, merge-commit hash, and final run output will be added after remote validation and merge.
+The housekeeping branch was pushed and merged through [PR #12](https://github.com/hossiendehghan989/atlasre-investment-intelligence/pull/12). Both push and pull-request CI runs passed. The resulting merge commit on `main` is `96aaa91837a7938325049a97f10f051d3f636a3d`.
 
 ## Headline-output preservation
 
