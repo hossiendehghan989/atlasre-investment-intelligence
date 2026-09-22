@@ -4,7 +4,8 @@ The lease path is additive. The simplified annual-NOI path remains the default;
 callers must opt into deriving NOI from a rent roll. Each monthly output retains
 contract rent, economic vacancy, rollover vacancy, and rollover rent separately
 so a reviewer can challenge the assumptions line by line.
-"""
+
+Author: Hossein Dehghan."""
 
 from __future__ import annotations
 

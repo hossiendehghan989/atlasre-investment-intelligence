@@ -1,4 +1,6 @@
-"""Deterministic debt schedules and constraint-based sizing."""
+"""Deterministic debt schedules and constraint-based sizing.
+
+Author: Hossein Dehghan."""
 
 from __future__ import annotations
 

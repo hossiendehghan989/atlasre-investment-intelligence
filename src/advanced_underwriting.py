@@ -1,4 +1,6 @@
-"""Advanced underwriting: development, uncertainty, and downside analytics."""
+"""Advanced underwriting: development, uncertainty, and downside analytics.
+
+Author: Hossein Dehghan."""
 
 from __future__ import annotations
 

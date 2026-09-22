@@ -1,3 +1,8 @@
+"""AtlasRE Streamlit decision surface.
+
+Author: Hossein Dehghan.
+"""
+
 import math
 from pathlib import Path
 

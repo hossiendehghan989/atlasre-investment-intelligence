@@ -1,4 +1,8 @@
-# Changelog
+# Development notes
+
+This file records how I have been building and checking AtlasRE. The entries are engineering notes, not product-release claims. The model remains an **ILLUSTRATIVE** screening prototype, and the limitations listed in the architecture and reviewer guide still apply.
+
+**Author:** Hossein Dehghan
 
 ## review-fixes — review package, reconciliation, and deployment preparation
 

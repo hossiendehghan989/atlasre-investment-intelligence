@@ -1,5 +1,7 @@
 # Independent finance review request
 
+I built this as a personal engineering project and am looking for specific, practical feedback on the model and its controls.
+
 ## Scope
 
 Please review the transparent, early-stage screening model for one acquisition case. The review should assess whether the stated formulas, modeling conventions, downside flags, source-status gate, and Excel reconciliation are internally coherent and sufficiently clear for an analyst to inspect.

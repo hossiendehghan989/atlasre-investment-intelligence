@@ -3,7 +3,8 @@
 This module keeps assumptions explicit and returns inspectable schedules rather than
 opaque summary numbers. Monthly cash flows are annualized correctly before being
 presented as project or equity IRR.
-"""
+
+Author: Hossein Dehghan."""
 
 from __future__ import annotations
 

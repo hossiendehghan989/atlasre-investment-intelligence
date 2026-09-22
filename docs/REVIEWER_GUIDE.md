@@ -1,6 +1,8 @@
 # Reviewer guide for the ILLUSTRATIVE case
 
-This guide explains how to check the default acquisition case independently. AtlasRE is screening decision support, not a valuation opinion or approval workflow. The workbook, package, and screenshots use **ILLUSTRATIVE** inputs and remain subject to source-document reconciliation.
+I wrote this guide so another person can check the default acquisition case without taking the headline numbers on trust. AtlasRE is screening decision support, not a valuation opinion or approval workflow. The workbook, package, and screenshots use **ILLUSTRATIVE** inputs and remain subject to source-document reconciliation.
+
+**Author:** Hossein Dehghan
 
 Start with the [project overview](OVERVIEW.md), then use the [review request](REVIEW_REQUEST.md) to define scope and the [structured checklist](review/REVIEW_CHECKLIST.md) to record findings. No independent review is claimed by this repository.
 

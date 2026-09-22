@@ -1,4 +1,6 @@
-"""Shared validation helpers for public financial-model inputs."""
+"""Shared validation helpers for public financial-model inputs.
+
+Author: Hossein Dehghan."""
 
 from __future__ import annotations
 

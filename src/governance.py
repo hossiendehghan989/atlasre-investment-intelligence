@@ -1,4 +1,6 @@
-"""Governance primitives for transparent, reviewable investment decisions."""
+"""Governance primitives for transparent, reviewable investment decisions.
+
+Author: Hossein Dehghan."""
 
 from __future__ import annotations
 

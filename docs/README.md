@@ -1,6 +1,8 @@
 # AtlasRE documentation index
 
-This directory contains current operating guidance, review materials, illustrative examples, and clearly identified historical records. The repository [README](../README.md) is the entry point for installation and a fast local run. Root-level [architecture](../ATLASRE_ARCHITECTURE.md) and [investment committee brief](../INVESTMENT_COMMITTEE_MEMO.md) remain at the repository root because they are GitHub-facing orientation documents rather than task-specific operating guides.
+This is the documentation for my AtlasRE project. It contains current operating guidance, review materials, illustrative examples, and clearly identified historical records. The repository [README](../README.md) is the entry point for installation and a fast local run. Root-level [architecture](../ATLASRE_ARCHITECTURE.md) and [investment committee brief](../INVESTMENT_COMMITTEE_MEMO.md) remain at the repository root because they are GitHub-facing orientation documents rather than task-specific operating guides.
+
+**Author:** [Hossein Dehghan](https://github.com/hossiendehghan989)
 
 | File | Purpose | Primary audience | Current status |
 | --- | --- | --- | --- |

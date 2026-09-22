@@ -1,4 +1,6 @@
-"""Transparent real-estate underwriting and market intelligence primitives."""
+"""Transparent real-estate underwriting and market intelligence primitives.
+
+Author: Hossein Dehghan."""
 
 from __future__ import annotations
 
