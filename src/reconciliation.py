@@ -233,22 +233,23 @@ def build_reconciliation_workbook(
             if period == deal.hold_years:
                 cash_flows.cell(row, 3, f"=B{row}-'Annual NOI'!F{annual_row}-'Debt Schedule'!I{monthly_end}")
             cash_flows.cell(row, 4, f"Year {period}")
-    cash_flows["A11"] = "Unlevered IRR"
-    cash_flows["B11"] = f"=IRR(B{cash_start}:B{cash_end})"
-    cash_flows["A12"] = "Levered IRR"
-    cash_flows["B12"] = f"=IRR(C{cash_start}:C{cash_end})"
-    cash_flows["A13"] = "Unlevered NPV"
-    cash_flows["B13"] = f"=B{cash_start}+NPV(Inputs!$B$9,B{cash_start + 1}:B{cash_end})"
-    cash_flows["A14"] = "Equity multiple"
-    cash_flows["B14"] = f'=SUMIF(C{cash_start}:C{cash_end},">0",C{cash_start}:C{cash_end})/-SUMIF(C{cash_start}:C{cash_end},"<0",C{cash_start}:C{cash_end})'
-    for row in range(11, 15):
+    metrics_start = cash_end + 2
+    cash_flows.cell(metrics_start, 1, "Unlevered IRR")
+    cash_flows.cell(metrics_start, 2, f"=IRR(B{cash_start}:B{cash_end})")
+    cash_flows.cell(metrics_start + 1, 1, "Levered IRR")
+    cash_flows.cell(metrics_start + 1, 2, f"=IRR(C{cash_start}:C{cash_end})")
+    cash_flows.cell(metrics_start + 2, 1, "Unlevered NPV")
+    cash_flows.cell(metrics_start + 2, 2, f"=B{cash_start}+NPV(Inputs!$B$9,B{cash_start + 1}:B{cash_end})")
+    cash_flows.cell(metrics_start + 3, 1, "Equity multiple")
+    cash_flows.cell(metrics_start + 3, 2, f'=SUMIF(C{cash_start}:C{cash_end},">0",C{cash_start}:C{cash_end})/-SUMIF(C{cash_start}:C{cash_end},"<0",C{cash_start}:C{cash_end})')
+    for row in range(metrics_start, metrics_start + 4):
         cash_flows.cell(row, 1).font = Font(bold=True)
         cash_flows.cell(row, 2).fill = _SUBHEADER_FILL
     _format_columns(cash_flows, {2: '$#,##0.00', 3: '$#,##0.00'}, cash_start, cash_end)
-    cash_flows["B11"].number_format = "0.00%"
-    cash_flows["B12"].number_format = "0.00%"
-    cash_flows["B13"].number_format = '$#,##0.00;[Red]-$#,##0.00'
-    cash_flows["B14"].number_format = "0.00x"
+    cash_flows.cell(metrics_start, 2).number_format = "0.00%"
+    cash_flows.cell(metrics_start + 1, 2).number_format = "0.00%"
+    cash_flows.cell(metrics_start + 2, 2).number_format = '$#,##0.00;[Red]-$#,##0.00'
+    cash_flows.cell(metrics_start + 3, 2).number_format = "0.00x"
     _fit_columns(cash_flows, {1: 20, 2: 23, 3: 23, 4: 32})
 
     _title(reconciliation, "Formula-to-model reconciliation", 5)
@@ -259,10 +260,10 @@ def build_reconciliation_workbook(
         ("Exit value", f"='Annual NOI'!C{annual_end}", float(result["exit_value"]), "0.01"),
         ("Remaining debt at exit", f"='Debt Schedule'!H{monthly_end}", float(result["remaining_debt_at_exit"]), "0.01"),
         ("Minimum DSCR", f"=MIN('Annual NOI'!G{annual_start}:G{annual_end})", float(result["minimum_dscr"]), "0.00000001"),
-        ("Unlevered IRR", "='Cash Flows'!B11", float(result["unlevered_irr"]), "0.00000001"),
-        ("Levered IRR", "='Cash Flows'!B12", float(result["levered_irr"]), "0.00000001"),
-        ("Unlevered NPV", "='Cash Flows'!B13", float(result["unlevered_npv"]), "0.01"),
-        ("Equity multiple", "='Cash Flows'!B14", float(result["equity_multiple"]), "0.00000001"),
+        ("Unlevered IRR", f"='Cash Flows'!B{metrics_start}", float(result["unlevered_irr"]), "0.00000001"),
+        ("Levered IRR", f"='Cash Flows'!B{metrics_start + 1}", float(result["levered_irr"]), "0.00000001"),
+        ("Unlevered NPV", f"='Cash Flows'!B{metrics_start + 2}", float(result["unlevered_npv"]), "0.01"),
+        ("Equity multiple", f"='Cash Flows'!B{metrics_start + 3}", float(result["equity_multiple"]), "0.00000001"),
     ]
     for row, (metric, formula, model_output, tolerance) in enumerate(output_rows, start=4):
         reconciliation.cell(row, 1, metric)

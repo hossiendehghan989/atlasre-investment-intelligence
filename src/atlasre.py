@@ -4,10 +4,16 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import dataclass
 from math import isfinite
+from numbers import Integral
 
 import numpy as np
 import pandas as pd
 from scipy.optimize import brentq
+
+MAX_SAFE_MONETARY_VALUE = 1e100
+MAX_HOLD_YEARS = 100
+MAX_DEBT_AMORTIZATION_YEARS = 100
+MAX_NOI_GROWTH = 10.0
 
 
 @dataclass(frozen=True)
@@ -26,23 +32,39 @@ class DealInputs:
 
 
 def _finite(value: float, name: str) -> None:
-    if not isfinite(float(value)):
+    if isinstance(value, bool):
+        raise ValueError(f"{name} must be finite")
+    try:
+        number = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be finite") from exc
+    if not isfinite(number):
         raise ValueError(f"{name} must be finite")
 
 
 def validate_deal(deal: DealInputs) -> None:
     for name in ("purchase_price", "annual_noi", "annual_noi_growth", "exit_cap_rate", "discount_rate", "acquisition_cost_pct", "selling_cost_pct", "leverage", "debt_rate"):
         _finite(getattr(deal, name), name)
+    if not isinstance(deal.hold_years, Integral) or isinstance(deal.hold_years, bool):
+        raise ValueError("hold_years must be an integer")
+    if not isinstance(deal.debt_amortization_years, Integral) or isinstance(deal.debt_amortization_years, bool):
+        raise ValueError("debt_amortization_years must be an integer")
     if deal.purchase_price <= 0 or deal.annual_noi <= 0:
         raise ValueError("purchase_price and annual_noi must be positive")
+    if max(deal.purchase_price, deal.annual_noi) > MAX_SAFE_MONETARY_VALUE:
+        raise ValueError("purchase_price and annual_noi must not exceed 1e100")
     if deal.hold_years < 1 or deal.debt_amortization_years < 1:
         raise ValueError("hold_years and debt_amortization_years must be positive")
-    if deal.annual_noi_growth <= -1 or deal.exit_cap_rate <= 0 or deal.discount_rate < 0:
-        raise ValueError("growth must be above -100%; exit cap must be positive; discount rate cannot be negative")
+    if deal.hold_years > MAX_HOLD_YEARS or deal.debt_amortization_years > MAX_DEBT_AMORTIZATION_YEARS:
+        raise ValueError("hold_years and debt_amortization_years must not exceed 100")
+    if deal.annual_noi_growth <= -1 or deal.annual_noi_growth > MAX_NOI_GROWTH:
+        raise ValueError("growth must be above -100% and no greater than 1000%")
+    if not 0 < deal.exit_cap_rate <= 1 or not 0 <= deal.discount_rate <= 1:
+        raise ValueError("exit cap must be in (0, 1]; discount rate must be in [0, 1]")
     if not 0 <= deal.acquisition_cost_pct <= 1 or not 0 <= deal.selling_cost_pct <= 1:
         raise ValueError("transaction cost percentages must be between 0 and 1")
-    if not 0 <= deal.leverage < 1 or deal.debt_rate < 0:
-        raise ValueError("leverage must be in [0, 1) and debt rate cannot be negative")
+    if not 0 <= deal.leverage < 1 or not 0 <= deal.debt_rate <= 1:
+        raise ValueError("leverage must be in [0, 1) and debt rate must be in [0, 1]")
 
 
 def _npv(rate: float, cash_flows: np.ndarray) -> float:

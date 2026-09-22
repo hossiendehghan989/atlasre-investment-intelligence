@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import zipfile
+from html import escape
 from io import BytesIO
 from pathlib import Path
 
@@ -168,7 +169,7 @@ def build_screening_package(
 
 | Control | Result |
 | --- | --- |
-| Deal ID | `{deal_id}` |
+| Deal ID | `{escape(deal_id)}` |
 | Source status | **{effective_source_status}** |
 | Decision status | **{screen['status']}** |
 | Model version | `{model_version}` |

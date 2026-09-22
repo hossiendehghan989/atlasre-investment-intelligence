@@ -4,6 +4,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from html import escape
 from typing import Any, Literal, TypedDict
 
 import pandas as pd
@@ -41,7 +42,10 @@ class DealCase:
             raise ValueError("deal identity and source_status must be valid")
 
     def effective_source_status(self) -> str:
-        if self.source_status == "VERIFIED" and self.verified_by and self.source_reference:
+        reviewer_and_reference = (self.verified_by, self.source_reference)
+        if self.source_status == "VERIFIED" and all(
+            isinstance(value, str) and bool(value.strip()) for value in reviewer_and_reference
+        ):
             return "VERIFIED"
         return "REVIEW REQUIRED"
 
@@ -153,9 +157,11 @@ def generate_ic_memo(
 | Expected shortfall, worst 10% NPV | {"N/A" if risk_metrics['expected_shortfall_npv_10'] is None else f"${risk_metrics['expected_shortfall_npv_10']:,.0f}"} |
 | Probability negative NPV | {percent_or_na(risk_metrics['probability_negative_npv'])} |
 | Probability DSCR below 1.25x | {percent_or_na(risk_metrics['probability_dscr_below_125'])} |"""
-    return f"""# Investment Committee Screening Memo — {case.name}
+    safe_name = escape(case.name)
+    safe_deal_id = escape(case.deal_id)
+    return f"""# Investment Committee Screening Memo — {safe_name}
 
-**Deal ID:** {case.deal_id}  
+**Deal ID:** {safe_deal_id}{'  '}
 **Prepared by:** {author}  
 **As of:** {datetime.now(UTC).date().isoformat()}
 **Source status:** **{screen['source_status']}**
