@@ -1,4 +1,6 @@
-"""Small presentation helpers shared by the dashboard and its tests."""
+"""Small presentation helpers shared by the dashboard and its tests.
+
+Author: Hossein Dehghan."""
 
 import math
 

@@ -1,4 +1,6 @@
-"""Portfolio-level decision support with explicit, enforceable constraints."""
+"""Portfolio-level decision support with explicit, enforceable constraints.
+
+Author: Hossein Dehghan."""
 
 from __future__ import annotations
 

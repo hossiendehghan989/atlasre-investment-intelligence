@@ -1,6 +1,6 @@
 # Two-minute demo script — ILLUSTRATIVE case
 
-This walkthrough uses the bundled **ILLUSTRATIVE** case. Do not describe the figures as market evidence, a valuation, or an investment recommendation.
+I use this two-minute walkthrough to show the main idea behind my AtlasRE prototype. It uses the bundled **ILLUSTRATIVE** case. Do not describe the figures as market evidence, a valuation, or an investment recommendation.
 
 | Time | Click or show | Suggested narration |
 | --- | --- | --- |

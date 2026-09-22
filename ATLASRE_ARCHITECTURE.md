@@ -1,10 +1,12 @@
 # AtlasRE Investment Intelligence — Architecture and Controls
 
+**Author:** Hossein Dehghan · **Project type:** personal engineering prototype
+
 ## Executive position
 
-AtlasRE is a **deterministic analytical prototype for real-estate investment committee screening**. Its architecture keeps financial calculations in small, inspectable Python modules and uses Streamlit as a decision surface. Governance and source status are model inputs, not visual annotations.
+I built AtlasRE as a **deterministic analytical prototype for real-estate screening**. The architecture keeps financial calculations in small, inspectable Python modules and uses Streamlit as a decision surface. Governance and source status are model inputs, not visual annotations.
 
-The system is designed to answer a narrow but important question: **given explicit assumptions, what does the model calculate, how fragile is the result, which constraints bind, and what must be verified before a human decision?** It does not claim production readiness, replace diligence, approve investments, or provide investment advice.
+The system is designed to answer a narrow question: **given explicit assumptions, what does the model calculate, how fragile is the result, which constraints bind, and what must be verified before a human decision?** That focus reflects how I approach decision-support work: understand the system, make assumptions explicit, build the simplest useful solution, and measure the result. The project does not claim production readiness, replace diligence, approve investments, or provide investment advice.
 
 ## Current architecture
 

@@ -1,4 +1,6 @@
-"""Formula-based Excel reconciliation workbooks for illustrative acquisition cases."""
+"""Formula-based Excel reconciliation workbooks for illustrative acquisition cases.
+
+Author: Hossein Dehghan."""
 
 from __future__ import annotations
 

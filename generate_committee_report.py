@@ -1,4 +1,6 @@
-"""Generate a deterministic, downside-first Investment Committee screening package."""
+"""Generate a deterministic, downside-first Investment Committee screening package.
+
+Author: Hossein Dehghan."""
 
 from __future__ import annotations
 

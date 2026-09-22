@@ -1,4 +1,6 @@
-"""Decision-committee views built on the AtlasRE underwriting engine."""
+"""Decision-committee views built on the AtlasRE underwriting engine.
+
+Author: Hossein Dehghan."""
 
 from __future__ import annotations
 

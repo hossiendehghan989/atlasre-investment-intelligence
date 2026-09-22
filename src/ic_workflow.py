@@ -1,4 +1,6 @@
-"""Typed committee workflow, comparison, and downside-first memo generation."""
+"""Typed committee workflow, comparison, and downside-first memo generation.
+
+Author: Hossein Dehghan."""
 
 from __future__ import annotations
 
