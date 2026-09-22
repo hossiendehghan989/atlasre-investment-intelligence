@@ -1,4 +1,5 @@
 """Decision-committee views built on the AtlasRE underwriting engine."""
+
 from __future__ import annotations
 
 import pandas as pd
@@ -19,7 +20,15 @@ def sensitivity_table(base: DealInputs, parameter: str, values: list[float]) -> 
     for value in values:
         scenario = DealInputs(**{**base.__dict__, parameter: value})
         result = underwrite_deal(scenario)
-        rows.append({parameter: value, "levered_irr": result["levered_irr"], "unlevered_npv": result["unlevered_npv"], "minimum_dscr": result["minimum_dscr"], "exit_value": result["exit_value"]})
+        rows.append(
+            {
+                parameter: value,
+                "levered_irr": result["levered_irr"],
+                "unlevered_npv": result["unlevered_npv"],
+                "minimum_dscr": result["minimum_dscr"],
+                "exit_value": result["exit_value"],
+            }
+        )
     return pd.DataFrame(rows)
 
 
@@ -30,6 +39,7 @@ def break_even_exit_cap(base: DealInputs, target_irr: float = 0.12) -> float:
     def objective(cap: float) -> float:
         deal = DealInputs(**{**base.__dict__, "exit_cap_rate": cap})
         return float(underwrite_deal(deal)["levered_irr"] - target_irr)
+
     try:
         return float(brentq(objective, 0.02, 0.15))
     except ValueError:
@@ -48,4 +58,10 @@ def investment_committee_summary(base: DealInputs, hurdle_rate: float = 0.12) ->
         flags.append("negative unlevered NPV")
     if not flags:
         flags.append("passes initial screen")
-    return {"decision_flag": "; ".join(flags), "levered_irr": result["levered_irr"], "minimum_dscr": result["minimum_dscr"], "unlevered_npv": result["unlevered_npv"], "break_even_exit_cap": break_even_exit_cap(base, hurdle_rate)}
+    return {
+        "decision_flag": "; ".join(flags),
+        "levered_irr": result["levered_irr"],
+        "minimum_dscr": result["minimum_dscr"],
+        "unlevered_npv": result["unlevered_npv"],
+        "break_even_exit_cap": break_even_exit_cap(base, hurdle_rate),
+    }

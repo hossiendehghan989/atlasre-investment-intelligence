@@ -1,5 +1,7 @@
 # Implementation evidence report
 
+> **Historical record.** This report documents an earlier `review-fixes` branch and its validation evidence; consult current guides such as [REVIEWER_GUIDE.md](REVIEWER_GUIDE.md) for the live repository state.
+
 ## Scope completed
 
 The `review-fixes` branch now includes a faster deterministic review-package pipeline, formula-based Excel reconciliation, dashboard package progress feedback, refreshed screenshots, committed **ILLUSTRATIVE** sample outputs, reviewer and demo materials, and Streamlit Community Cloud deployment guidance. The work did not modify `main` or merge pull request #1.

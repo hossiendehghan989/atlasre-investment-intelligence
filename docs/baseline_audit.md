@@ -1,5 +1,7 @@
 # Baseline audit
 
+> **Historical record.** This audit preserves an earlier repository comparison and remediation trail; it is not a statement of the current branch state.
+
 **Audit date:** 2026-09-19  
 **Repository:** `https://github.com/hossiendehghan989/atlasre-investment-intelligence`  
 **Working copy:** local clone

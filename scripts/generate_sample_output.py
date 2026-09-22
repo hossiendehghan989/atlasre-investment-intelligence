@@ -1,4 +1,5 @@
 """Generate committed ILLUSTRATIVE review files from the default deterministic case."""
+
 from __future__ import annotations
 
 import json
@@ -25,9 +26,7 @@ def generate() -> None:
     files = build_screening_package(DealInputs(10_000_000, 650_000, hold_years=5, leverage=0.5))
     report = files["investment_committee_report.md"]
     fingerprint = next(
-        line.split("`")[1]
-        for line in report.decode().splitlines()
-        if line.startswith("| Model-run fingerprint |")
+        line.split("`")[1] for line in report.decode().splitlines() if line.startswith("| Model-run fingerprint |")
     )
     metadata = _metadata_line(fingerprint)
 

@@ -1,4 +1,5 @@
 """Transparent real-estate underwriting and market intelligence primitives."""
+
 from __future__ import annotations
 
 from collections.abc import Iterable
@@ -9,6 +10,8 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import brentq
 
+from .validation import coerced_finite
+
 MAX_CURRENCY_INPUT = 100_000_000_000_000
 MAX_HOLD_YEARS = 100
 MAX_AMORTIZATION_YEARS = 100
@@ -16,6 +19,8 @@ MAX_AMORTIZATION_YEARS = 100
 
 @dataclass(frozen=True)
 class DealInputs:
+    """Explicit annual-acquisition underwriting assumptions."""
+
     purchase_price: float
     annual_noi: float
     hold_years: int = 5
@@ -29,14 +34,19 @@ class DealInputs:
     debt_amortization_years: int = 20
 
 
-def _finite(value: float, name: str) -> None:
-    if not isfinite(float(value)):
-        raise ValueError(f"{name} must be finite")
-
-
 def validate_deal(deal: DealInputs) -> None:
-    for name in ("purchase_price", "annual_noi", "annual_noi_growth", "exit_cap_rate", "discount_rate", "acquisition_cost_pct", "selling_cost_pct", "leverage", "debt_rate"):
-        _finite(getattr(deal, name), name)
+    for name in (
+        "purchase_price",
+        "annual_noi",
+        "annual_noi_growth",
+        "exit_cap_rate",
+        "discount_rate",
+        "acquisition_cost_pct",
+        "selling_cost_pct",
+        "leverage",
+        "debt_rate",
+    ):
+        coerced_finite(getattr(deal, name), name)
     if deal.purchase_price <= 0 or deal.annual_noi <= 0:
         raise ValueError("purchase_price and annual_noi must be positive")
     if deal.purchase_price > MAX_CURRENCY_INPUT or deal.annual_noi > MAX_CURRENCY_INPUT:
@@ -60,7 +70,12 @@ def _npv(rate: float, cash_flows: np.ndarray) -> float:
         return float("nan")
     with np.errstate(over="ignore", divide="ignore", invalid="ignore"):
         discount_factors = np.power(1 + rate, np.arange(cash_flows.size, dtype=float))
-        discounted = np.divide(cash_flows, discount_factors, out=np.zeros_like(cash_flows), where=np.isfinite(discount_factors) & (discount_factors != 0))
+        discounted = np.divide(
+            cash_flows,
+            discount_factors,
+            out=np.zeros_like(cash_flows),
+            where=np.isfinite(discount_factors) & (discount_factors != 0),
+        )
     return float(np.sum(discounted))
 
 
@@ -124,7 +139,9 @@ def underwrite_deal(deal: DealInputs) -> dict[str, float | list[float]]:
                 interest += monthly_interest
                 principal += scheduled_principal
                 balance = max(0.0, balance - scheduled_principal)
-            debt_schedule.append({"year": year, "interest": interest, "principal": principal, "ending_balance": balance})
+            debt_schedule.append(
+                {"year": year, "interest": interest, "principal": principal, "ending_balance": balance}
+            )
             debt_service_schedule.append(interest + principal)
         remaining_debt = balance
     if debt:
@@ -132,7 +149,11 @@ def underwrite_deal(deal: DealInputs) -> dict[str, float | list[float]]:
     else:
         debt_service_schedule = [0.0] * len(noi)
     dscr = [cash / service if service else float("inf") for cash, service in zip(noi, debt_service_schedule)]
-    levered_flows = [-equity] + [cash - service for cash, service in zip(noi[:-1], debt_service_schedule[:-1])] + [noi[-1] + exit_value - selling_cost - debt_service_schedule[-1] - remaining_debt]
+    levered_flows = (
+        [-equity]
+        + [cash - service for cash, service in zip(noi[:-1], debt_service_schedule[:-1])]
+        + [noi[-1] + exit_value - selling_cost - debt_service_schedule[-1] - remaining_debt]
+    )
     total_distributions = sum(flow for flow in levered_flows if flow > 0)
     total_equity_invested = -sum(flow for flow in levered_flows if flow < 0)
     equity_multiple = total_distributions / total_equity_invested if total_equity_invested else float("nan")
@@ -196,7 +217,13 @@ def market_score(market: dict[str, float], weights: dict[str, float] | None = No
     compatibility alias for the same composite score; it is not multiplied by
     risk a second time.
     """
-    weights = weights or {"population_growth": 0.25, "employment_growth": 0.20, "rent_growth": 0.25, "liquidity": 0.15, "risk": 0.15}
+    weights = weights or {
+        "population_growth": 0.25,
+        "employment_growth": 0.20,
+        "rent_growth": 0.25,
+        "liquidity": 0.15,
+        "risk": 0.15,
+    }
     required = {"population_growth", "employment_growth", "rent_growth", "liquidity", "risk"}
     if not required.issubset(market) or any(not isfinite(float(market[key])) for key in required):
         raise ValueError(f"market must include finite values for {sorted(required)}")
@@ -204,7 +231,10 @@ def market_score(market: dict[str, float], weights: dict[str, float] | None = No
         raise ValueError("market weights must be non-negative and sum to 1")
     if any(not 0 <= market[key] <= 1 for key in required):
         raise ValueError("market factors must be normalized to [0, 1]")
-    score = sum(market[key] * weight for key, weight in weights.items() if key != "risk") + (1 - market["risk"]) * weights["risk"]
+    score = (
+        sum(market[key] * weight for key, weight in weights.items() if key != "risk")
+        + (1 - market["risk"]) * weights["risk"]
+    )
     composite = float(np.clip(score * 100, 0, 100))
     return {"score_0_100": composite, "risk_adjusted_score": composite}
 
@@ -215,7 +245,11 @@ def rank_markets(markets: pd.DataFrame) -> pd.DataFrame:
     if missing:
         raise ValueError(f"Missing market columns: {sorted(missing)}")
     rows = [{"market": row["market"], **market_score(row.to_dict())} for _, row in markets.iterrows()]
-    return pd.DataFrame(rows).sort_values(["risk_adjusted_score", "market"], ascending=[False, True]).reset_index(drop=True)
+    return (
+        pd.DataFrame(rows)
+        .sort_values(["risk_adjusted_score", "market"], ascending=[False, True])
+        .reset_index(drop=True)
+    )
 
 
 def portfolio_exposure(deals: pd.DataFrame, capital: float) -> pd.DataFrame:

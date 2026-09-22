@@ -4,6 +4,7 @@ This module keeps assumptions explicit and returns inspectable schedules rather 
 opaque summary numbers. Monthly cash flows are annualized correctly before being
 presented as project or equity IRR.
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterable
@@ -19,6 +20,8 @@ from .validation import integer, non_negative, positive, unit_interval
 
 @dataclass(frozen=True)
 class MonthlyDevelopmentInputs:
+    """Inputs for the monthly development and financing schedule."""
+
     land_cost: float
     hard_cost: float
     soft_cost: float
@@ -97,22 +100,29 @@ def monthly_development_model(p: MonthlyDevelopmentInputs) -> tuple[pd.DataFrame
     sale_proceeds[-1] = exit_value
     debt_repayment = np.zeros(total_months)
     debt_repayment[-1] = ending_balance[-1]
-    df = pd.DataFrame({
-        "month": months,
-        "land_draw": land_draw,
-        "hard_draw": hard_draw,
-        "soft_draw": soft_draw,
-        "contingency_draw": contingency_draw,
-        "total_draw": total_draw,
-        "debt_draw": debt_draw,
-        "lender_fee": lender_fee,
-        "interest": interest,
-        "ending_debt": ending_balance,
-        "noi": noi,
-        "sale_proceeds": sale_proceeds,
-        "debt_repayment": debt_repayment,
-    })
-    equity_flow = -(df["total_draw"] - df["debt_draw"] + df["lender_fee"]) + df["noi"] + df["sale_proceeds"] - df["debt_repayment"]
+    df = pd.DataFrame(
+        {
+            "month": months,
+            "land_draw": land_draw,
+            "hard_draw": hard_draw,
+            "soft_draw": soft_draw,
+            "contingency_draw": contingency_draw,
+            "total_draw": total_draw,
+            "debt_draw": debt_draw,
+            "lender_fee": lender_fee,
+            "interest": interest,
+            "ending_debt": ending_balance,
+            "noi": noi,
+            "sale_proceeds": sale_proceeds,
+            "debt_repayment": debt_repayment,
+        }
+    )
+    equity_flow = (
+        -(df["total_draw"] - df["debt_draw"] + df["lender_fee"])
+        + df["noi"]
+        + df["sale_proceeds"]
+        - df["debt_repayment"]
+    )
     # Project IRR is unlevered: financing cash flows (draws, interest, and
     # repayment) are excluded. Equity IRR below is levered and includes the
     # actual equity contributions and debt repayment.
@@ -134,9 +144,23 @@ def monthly_development_model(p: MonthlyDevelopmentInputs) -> tuple[pd.DataFrame
     }
 
 
-def size_debt(noi: float, cap_rate: float, max_ltv: float, dscr_requirement: float, interest_rate: float, amortization_years: int, value: float) -> dict[str, float]:
+def size_debt(
+    noi: float,
+    cap_rate: float,
+    max_ltv: float,
+    dscr_requirement: float,
+    interest_rate: float,
+    amortization_years: int,
+    value: float,
+) -> dict[str, float]:
     """Size debt from the binding of LTV and amortizing DSCR constraints."""
-    for name, number in (("noi", noi), ("cap_rate", cap_rate), ("interest_rate", interest_rate), ("value", value), ("dscr_requirement", dscr_requirement)):
+    for name, number in (
+        ("noi", noi),
+        ("cap_rate", cap_rate),
+        ("interest_rate", interest_rate),
+        ("value", value),
+        ("dscr_requirement", dscr_requirement),
+    ):
         positive(number, name)
     unit_interval(max_ltv, "max_ltv")
     integer(amortization_years, "amortization_years", minimum=1)
@@ -146,10 +170,20 @@ def size_debt(noi: float, cap_rate: float, max_ltv: float, dscr_requirement: flo
     dscr_loan = (noi / dscr_requirement) / annual_payment_factor
     ltv_loan = value * max_ltv
     loan = min(dscr_loan, ltv_loan)
-    return {"property_value": value, "ltv_limit": ltv_loan, "dscr_limit": dscr_loan, "recommended_loan": loan, "implied_ltv": loan / value, "underwriting_dscr": noi / (loan * annual_payment_factor), "binding_constraint": "LTV" if ltv_loan <= dscr_loan else "DSCR"}
+    return {
+        "property_value": value,
+        "ltv_limit": ltv_loan,
+        "dscr_limit": dscr_loan,
+        "recommended_loan": loan,
+        "implied_ltv": loan / value,
+        "underwriting_dscr": noi / (loan * annual_payment_factor),
+        "binding_constraint": "LTV" if ltv_loan <= dscr_loan else "DSCR",
+    }
 
 
-def multi_tier_waterfall(equity: float, total_distributable_cash: float, pref_rate: float, hold_years: int, tiers: Iterable[WaterfallTier]) -> dict[str, object]:
+def multi_tier_waterfall(
+    equity: float, total_distributable_cash: float, pref_rate: float, hold_years: int, tiers: Iterable[WaterfallTier]
+) -> dict[str, object]:
     """Distribute cash through return of capital, pref, and ordered promote tiers.
 
     `total_distributable_cash` is total cash available at exit, including return of
@@ -182,22 +216,69 @@ def multi_tier_waterfall(equity: float, total_distributable_cash: float, pref_ra
         lp_profit += lp_share
         gp_promote += gp_share
         cash_remaining -= tier_cash
-        tier_rows.append({"tier": tier.name, "hurdle_rate": tier.hurdle_rate, "promote_pct": tier.promote_pct, "tier_cash": tier_cash, "lp_share": lp_share, "gp_share": gp_share})
+        tier_rows.append(
+            {
+                "tier": tier.name,
+                "hurdle_rate": tier.hurdle_rate,
+                "promote_pct": tier.promote_pct,
+                "tier_cash": tier_cash,
+                "lp_share": lp_share,
+                "gp_share": gp_share,
+            }
+        )
         previous_hurdle_profit = hurdle_profit
     lp_total = return_of_capital + lp_profit
     gp_total = gp_promote
-    return {"return_of_capital": return_of_capital, "lp_preferred_return": lp_pref, "lp_profit": lp_profit, "gp_promote": gp_promote, "lp_total_distribution": lp_total, "gp_total_distribution": gp_total, "distribution_check": lp_total + gp_total, "unallocated_cash": cash_remaining, "tiers": tier_rows, "lp_cash_flows": [-equity] + [0.0] * (hold_years - 1) + [lp_total], "gp_cash_flows": [0.0] * hold_years + [gp_total]}
+    return {
+        "return_of_capital": return_of_capital,
+        "lp_preferred_return": lp_pref,
+        "lp_profit": lp_profit,
+        "gp_promote": gp_promote,
+        "lp_total_distribution": lp_total,
+        "gp_total_distribution": gp_total,
+        "distribution_check": lp_total + gp_total,
+        "unallocated_cash": cash_remaining,
+        "tiers": tier_rows,
+        "lp_cash_flows": [-equity] + [0.0] * (hold_years - 1) + [lp_total],
+        "gp_cash_flows": [0.0] * hold_years + [gp_total],
+    }
 
 
-def lp_gp_waterfall(equity: float, distributable_profit: float, pref_rate: float, hold_years: int, promote_pct: float) -> dict[str, float]:
+def lp_gp_waterfall(
+    equity: float, distributable_profit: float, pref_rate: float, hold_years: int, promote_pct: float
+) -> dict[str, float]:
     """Backward-compatible single-promote wrapper using total proceeds semantics."""
-    result = multi_tier_waterfall(equity, equity + distributable_profit, pref_rate, hold_years, [WaterfallTier(pref_rate + 0.0001, promote_pct, "Promote")])
+    result = multi_tier_waterfall(
+        equity,
+        equity + distributable_profit,
+        pref_rate,
+        hold_years,
+        [WaterfallTier(pref_rate + 0.0001, promote_pct, "Promote")],
+    )
     return {key: value for key, value in result.items() if isinstance(value, float | int)}
 
 
 def assumption_quality(inputs: dict[str, float | str | int]) -> pd.DataFrame:
     """Create a review checklist so assumptions are not mistaken for facts."""
-    return pd.DataFrame([{"assumption": name, "value": value, "status": "REVIEW REQUIRED", "source": "Not supplied; illustrative input"} for name, value in inputs.items()])
+    return pd.DataFrame(
+        [
+            {
+                "assumption": name,
+                "value": value,
+                "status": "REVIEW REQUIRED",
+                "source": "Not supplied; illustrative input",
+            }
+            for name, value in inputs.items()
+        ]
+    )
 
 
-__all__ = ["MonthlyDevelopmentInputs", "WaterfallTier", "assumption_quality", "lp_gp_waterfall", "monthly_development_model", "multi_tier_waterfall", "size_debt"]
+__all__ = [
+    "MonthlyDevelopmentInputs",
+    "WaterfallTier",
+    "assumption_quality",
+    "lp_gp_waterfall",
+    "monthly_development_model",
+    "multi_tier_waterfall",
+    "size_debt",
+]

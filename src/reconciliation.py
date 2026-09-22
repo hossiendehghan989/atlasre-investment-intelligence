@@ -1,4 +1,5 @@
 """Formula-based Excel reconciliation workbooks for illustrative acquisition cases."""
+
 from __future__ import annotations
 
 from io import BytesIO
@@ -143,7 +144,7 @@ def build_reconciliation_workbook(
             inputs.cell(row, column, value)
     _format_columns(
         inputs,
-        {2: '$#,##0.00;[Red]-$#,##0.00', 3: '@'},
+        {2: "$#,##0.00;[Red]-$#,##0.00", 3: "@"},
         4,
         5,
     )
@@ -175,7 +176,12 @@ def build_reconciliation_workbook(
             f"=SUMIFS('Debt Schedule'!$F$4:$F${monthly_end},'Debt Schedule'!$B$4:$B${monthly_end},A{row})",
         )
         annual_noi.cell(row, 7, f'=IF(F{row}=0,"",B{row}/F{row})')
-    _format_columns(annual_noi, {2: '$#,##0.00', 3: '$#,##0.00', 4: '$#,##0.00', 5: '$#,##0.00', 6: '$#,##0.00', 7: '0.00x'}, annual_start, annual_end)
+    _format_columns(
+        annual_noi,
+        {2: "$#,##0.00", 3: "$#,##0.00", 4: "$#,##0.00", 5: "$#,##0.00", 6: "$#,##0.00", 7: "0.00x"},
+        annual_start,
+        annual_end,
+    )
     _fit_columns(annual_noi, {1: 10, 2: 18, 3: 18, 4: 18, 5: 25, 6: 18, 7: 12})
 
     _title(debt_schedule, "Monthly debt schedule", 10)
@@ -201,15 +207,30 @@ def build_reconciliation_workbook(
         debt_schedule.cell(row, 2, f"=ROUNDUP(A{row}/12,0)")
         debt_schedule.cell(row, 3, "=Inputs!$B$4*Inputs!$B$12" if row == 4 else f"=H{row - 1}")
         debt_schedule.cell(row, 4, "=Inputs!$B$13/12")
-        debt_schedule.cell(row, 5, f"=IF(A{row}<=Inputs!$B$14*12,-IPMT(D{row},A{row},Inputs!$B$14*12,Inputs!$B$4*Inputs!$B$12),0)")
-        debt_schedule.cell(row, 6, f"=IF(A{row}<=Inputs!$B$14*12,-PMT(D{row},Inputs!$B$14*12,Inputs!$B$4*Inputs!$B$12),0)")
-        debt_schedule.cell(row, 7, f"=IF(A{row}<=Inputs!$B$14*12,-PPMT(D{row},A{row},Inputs!$B$14*12,Inputs!$B$4*Inputs!$B$12),0)")
+        debt_schedule.cell(
+            row, 5, f"=IF(A{row}<=Inputs!$B$14*12,-IPMT(D{row},A{row},Inputs!$B$14*12,Inputs!$B$4*Inputs!$B$12),0)"
+        )
+        debt_schedule.cell(
+            row, 6, f"=IF(A{row}<=Inputs!$B$14*12,-PMT(D{row},Inputs!$B$14*12,Inputs!$B$4*Inputs!$B$12),0)"
+        )
+        debt_schedule.cell(
+            row, 7, f"=IF(A{row}<=Inputs!$B$14*12,-PPMT(D{row},A{row},Inputs!$B$14*12,Inputs!$B$4*Inputs!$B$12),0)"
+        )
         debt_schedule.cell(row, 8, f"=MAX(0,C{row}-G{row})")
         debt_schedule.cell(row, 9, f"=IF(A{row}=Inputs!$B$6*12,H{row},0)")
         debt_schedule.cell(row, 10, f"=SUMIFS($F$4:$F${monthly_end},$B$4:$B${monthly_end},B{row})")
     _format_columns(
         debt_schedule,
-        {3: '$#,##0.00', 4: '0.0000%', 5: '$#,##0.00', 6: '$#,##0.00', 7: '$#,##0.00', 8: '$#,##0.00', 9: '$#,##0.00', 10: '$#,##0.00'},
+        {
+            3: "$#,##0.00",
+            4: "0.0000%",
+            5: "$#,##0.00",
+            6: "$#,##0.00",
+            7: "$#,##0.00",
+            8: "$#,##0.00",
+            9: "$#,##0.00",
+            10: "$#,##0.00",
+        },
         4,
         monthly_end,
     )
@@ -241,25 +262,36 @@ def build_reconciliation_workbook(
     cash_flows.cell(metrics_start + 2, 1, "Unlevered NPV")
     cash_flows.cell(metrics_start + 2, 2, f"=B{cash_start}+NPV(Inputs!$B$9,B{cash_start + 1}:B{cash_end})")
     cash_flows.cell(metrics_start + 3, 1, "Equity multiple")
-    cash_flows.cell(metrics_start + 3, 2, f'=SUMIF(C{cash_start}:C{cash_end},">0",C{cash_start}:C{cash_end})/-SUMIF(C{cash_start}:C{cash_end},"<0",C{cash_start}:C{cash_end})')
+    cash_flows.cell(
+        metrics_start + 3,
+        2,
+        f'=SUMIF(C{cash_start}:C{cash_end},">0",C{cash_start}:C{cash_end})/-SUMIF(C{cash_start}:C{cash_end},"<0",C{cash_start}:C{cash_end})',
+    )
     for row in range(metrics_start, metrics_start + 4):
         cash_flows.cell(row, 1).font = Font(bold=True)
         cash_flows.cell(row, 2).fill = _SUBHEADER_FILL
-    _format_columns(cash_flows, {2: '$#,##0.00', 3: '$#,##0.00'}, cash_start, cash_end)
+    _format_columns(cash_flows, {2: "$#,##0.00", 3: "$#,##0.00"}, cash_start, cash_end)
     cash_flows.cell(metrics_start, 2).number_format = "0.00%"
     cash_flows.cell(metrics_start + 1, 2).number_format = "0.00%"
-    cash_flows.cell(metrics_start + 2, 2).number_format = '$#,##0.00;[Red]-$#,##0.00'
+    cash_flows.cell(metrics_start + 2, 2).number_format = "$#,##0.00;[Red]-$#,##0.00"
     cash_flows.cell(metrics_start + 3, 2).number_format = "0.00x"
     _fit_columns(cash_flows, {1: 20, 2: 23, 3: 23, 4: 32})
 
     _title(reconciliation, "Formula-to-model reconciliation", 5)
-    reconciliation["A2"] = "Difference is workbook formula less static Python model output. Amounts should be approximately zero after recalculation."
+    reconciliation["A2"] = (
+        "Difference is workbook formula less static Python model output. Amounts should be approximately zero after recalculation."
+    )
     _header(reconciliation, 3, ["Metric", "Excel formula result", "Model output", "Difference", "Tolerance"])
     output_rows: list[tuple[str, str, float, str]] = [
         ("Entry cap rate", "=Inputs!$B$5/Inputs!$B$4", float(result["entry_cap_rate"]), "0.00000001"),
         ("Exit value", f"='Annual NOI'!C{annual_end}", float(result["exit_value"]), "0.01"),
         ("Remaining debt at exit", f"='Debt Schedule'!H{monthly_end}", float(result["remaining_debt_at_exit"]), "0.01"),
-        ("Minimum DSCR", f"=MIN('Annual NOI'!G{annual_start}:G{annual_end})", float(result["minimum_dscr"]), "0.00000001"),
+        (
+            "Minimum DSCR",
+            f"=MIN('Annual NOI'!G{annual_start}:G{annual_end})",
+            float(result["minimum_dscr"]),
+            "0.00000001",
+        ),
         ("Unlevered IRR", f"='Cash Flows'!B{metrics_start}", float(result["unlevered_irr"]), "0.00000001"),
         ("Levered IRR", f"='Cash Flows'!B{metrics_start + 1}", float(result["levered_irr"]), "0.00000001"),
         ("Unlevered NPV", f"='Cash Flows'!B{metrics_start + 2}", float(result["unlevered_npv"]), "0.01"),
@@ -271,10 +303,10 @@ def build_reconciliation_workbook(
         reconciliation.cell(row, 3, model_output)
         reconciliation.cell(row, 4, f"=B{row}-C{row}")
         reconciliation.cell(row, 5, float(tolerance))
-    _format_columns(reconciliation, {2: '0.00000000', 3: '0.00000000', 4: '0.00000000', 5: '0.00000000'}, 4, 11)
+    _format_columns(reconciliation, {2: "0.00000000", 3: "0.00000000", 4: "0.00000000", 5: "0.00000000"}, 4, 11)
     for row in [5, 6, 10]:
         for column in [2, 3, 4, 5]:
-            reconciliation.cell(row, column).number_format = '$#,##0.00;[Red]-$#,##0.00'
+            reconciliation.cell(row, column).number_format = "$#,##0.00;[Red]-$#,##0.00"
     for row in [4, 7, 8, 9]:
         for column in [2, 3, 4, 5]:
             reconciliation.cell(row, column).number_format = "0.00000000"

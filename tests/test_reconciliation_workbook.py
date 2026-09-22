@@ -64,8 +64,11 @@ def test_reconciliation_static_outputs_match_independent_python_reevaluation():
     equity = acquisition - debt
     months = deal.hold_years * 12
     monthly_rate = deal.debt_rate / 12
-    payment = debt * monthly_rate * (1 + monthly_rate) ** (deal.debt_amortization_years * 12) / (
-        (1 + monthly_rate) ** (deal.debt_amortization_years * 12) - 1
+    payment = (
+        debt
+        * monthly_rate
+        * (1 + monthly_rate) ** (deal.debt_amortization_years * 12)
+        / ((1 + monthly_rate) ** (deal.debt_amortization_years * 12) - 1)
     )
     balance = debt
     annual_service = []
@@ -80,7 +83,11 @@ def test_reconciliation_static_outputs_match_independent_python_reevaluation():
     noi = np.asarray([deal.annual_noi * (1 + deal.annual_noi_growth) ** year for year in range(deal.hold_years)])
     exit_value = noi[-1] / deal.exit_cap_rate
     unlevered = np.r_[-acquisition, noi[:-1], noi[-1] + exit_value * (1 - deal.selling_cost_pct)]
-    levered = np.r_[-equity, noi[:-1] - np.asarray(annual_service[:-1]), noi[-1] + exit_value * (1 - deal.selling_cost_pct) - annual_service[-1] - balance]
+    levered = np.r_[
+        -equity,
+        noi[:-1] - np.asarray(annual_service[:-1]),
+        noi[-1] + exit_value * (1 - deal.selling_cost_pct) - annual_service[-1] - balance,
+    ]
 
     expected = {
         "Entry cap rate": deal.annual_noi / deal.purchase_price,
