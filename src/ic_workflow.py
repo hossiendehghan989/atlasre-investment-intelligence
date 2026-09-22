@@ -12,7 +12,7 @@ import pandas as pd
 from .atlasre import DealInputs, underwrite_deal
 from .committee_analytics import investment_committee_summary
 from .governance import assumption_register, default_lineage, model_run_fingerprint
-from .presentation import percent_or_na
+from .presentation import number_or_na_report, percent_or_na, percent_or_na_report
 
 DecisionStatus = Literal["PASSES INITIAL SCREEN", "REVIEW REQUIRED", "REJECT / REWORK"]
 
@@ -184,13 +184,13 @@ This is a screening memo, not an approval. The deterministic model cannot substi
 
 | Metric | Result |
 | --- | ---: |
-| Entry cap rate | {result['entry_cap_rate']:.2%} |
-| Levered IRR | {result['levered_irr']:.2%} |
-| Unlevered IRR | {result['unlevered_irr']:.2%} |
-| Equity multiple | {result['equity_multiple']:.2f}x |
-| Minimum DSCR | {result['minimum_dscr']:.2f}x |
-| Unlevered NPV | ${result['unlevered_npv']:,.0f} |
-| Exit value | ${result['exit_value']:,.0f} |
+| Entry cap rate | {percent_or_na_report(result['entry_cap_rate'])} |
+| Levered IRR | {percent_or_na_report(result['levered_irr'], reason='IRR did not converge')} |
+| Unlevered IRR | {percent_or_na_report(result['unlevered_irr'], reason='IRR did not converge')} |
+| Equity multiple | {number_or_na_report(result['equity_multiple'], decimals=2, suffix='x', reason='Equity multiple is not defined')} |
+| Minimum DSCR | {number_or_na_report(result['minimum_dscr'], decimals=2, suffix='x', reason='DSCR is not defined')} |
+| Unlevered NPV | {number_or_na_report(result['unlevered_npv'], prefix='$', reason='NPV is not finite')} |
+| Exit value | {number_or_na_report(result['exit_value'], prefix='$', reason='Exit value is not finite')} |
 | Break-even exit cap | {percent_or_na(summary['break_even_exit_cap'])} |
 
 ## 4. Assumptions and traceability

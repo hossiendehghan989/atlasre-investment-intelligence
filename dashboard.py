@@ -13,15 +13,15 @@ from src.governance import default_lineage, lineage_json, model_run_fingerprint,
 from src.ic_workflow import DealCase, compare_deals, generate_ic_memo, screen_case
 from src.lease import LeaseUnderwritingInputs, illustrative_rent_roll, lease_summary, underwrite_with_lease_roll
 from src.portfolio import portfolio_allocation, portfolio_risk_view, portfolio_snapshot
-from src.presentation import fraction_from_percent, number_or_na, percent_or_na
+from src.presentation import fraction_from_percent, metric_help, number_or_na, percent_or_na
 from src.reconciliation import build_reconciliation_workbook
 
 ROOT = Path(__file__).resolve().parent
 
 
-def finite_or_zero(value: float) -> float:
-    """Keep optional portfolio display analytics finite without changing model outputs."""
-    return float(value) if math.isfinite(float(value)) else 0.0
+def display_metric_or_na(value: float) -> float | str:
+    """Keep portfolio display metrics tied to their own value, never a zero substitute."""
+    return float(value) if math.isfinite(float(value)) else "N/A"
 
 st.set_page_config(page_title="AtlasRE | Deal Review", layout="wide", initial_sidebar_state="expanded")
 
@@ -144,10 +144,10 @@ st.caption("This case stays in review until the open items are resolved and the 
 
 st.markdown("## Downside first")
 downside_cols = st.columns(4)
-downside_cols[0].metric("Unlevered NPV", f"${underwriting['unlevered_npv']:,.0f}")
-downside_cols[1].metric("Minimum DSCR", number_or_na(underwriting["minimum_dscr"], decimals=2, suffix="x"))
-downside_cols[2].metric("IRR in worst 10%", percent_or_na(risk["expected_shortfall_irr_10"], 1))
-downside_cols[3].metric("Chance of value loss", percent_or_na(risk["probability_negative_npv"], 1))
+downside_cols[0].metric("Unlevered NPV", number_or_na(underwriting["unlevered_npv"], prefix="$"), help=metric_help(underwriting["unlevered_npv"], "NPV is not finite"))
+downside_cols[1].metric("Minimum DSCR", number_or_na(underwriting["minimum_dscr"], decimals=2, suffix="x"), help=metric_help(underwriting["minimum_dscr"], "DSCR is not defined"))
+downside_cols[2].metric("IRR in worst 10%", percent_or_na(risk["expected_shortfall_irr_10"], 1), help=metric_help(risk["expected_shortfall_irr_10"], "Risk-tail IRR is not defined"))
+downside_cols[3].metric("Chance of value loss", percent_or_na(risk["probability_negative_npv"], 1), help=metric_help(risk["probability_negative_npv"], "Probability is not defined"))
 
 with st.expander("Risk tail detail", expanded=False):
     tail_left, tail_right = st.columns(2)
@@ -159,10 +159,10 @@ with st.expander("Risk tail detail", expanded=False):
 st.markdown("## Current case")
 base_cols = st.columns(5)
 base_cols[0].metric("Entry cap", percent_or_na(underwriting["entry_cap_rate"]))
-base_cols[1].metric("Levered IRR", percent_or_na(underwriting["levered_irr"]))
-base_cols[2].metric("Unlevered IRR", percent_or_na(underwriting["unlevered_irr"]))
-base_cols[3].metric("Equity multiple", number_or_na(underwriting["equity_multiple"], decimals=2, suffix="x"))
-base_cols[4].metric("Exit value", number_or_na(underwriting["exit_value"], prefix="$"))
+base_cols[1].metric("Levered IRR", percent_or_na(underwriting["levered_irr"]), help=metric_help(underwriting["levered_irr"], "IRR did not converge"))
+base_cols[2].metric("Unlevered IRR", percent_or_na(underwriting["unlevered_irr"]), help=metric_help(underwriting["unlevered_irr"], "IRR did not converge"))
+base_cols[3].metric("Equity multiple", number_or_na(underwriting["equity_multiple"], decimals=2, suffix="x"), help=metric_help(underwriting["equity_multiple"], "Equity multiple is not defined"))
+base_cols[4].metric("Exit value", number_or_na(underwriting["exit_value"], prefix="$"), help=metric_help(underwriting["exit_value"], "Exit value is not finite"))
 
 st.markdown("<div class='section-rule'></div>", unsafe_allow_html=True)
 tab_screen, tab_returns, tab_debt, tab_portfolio, tab_audit = st.tabs(["Review note", "Returns", "Debt / rent roll", "Portfolio fit", "Inputs & record"])
@@ -249,8 +249,8 @@ with tab_portfolio:
     st.markdown("### Allocation check")
     ranked = rank_markets(pd.read_csv(ROOT / "data" / "market_inputs.csv"))
     portfolio_deals = pd.DataFrame([
-        {"asset": "Core-plus logistics · Dubai", "equity_required": underwriting["equity_required"], "risk_adjusted_score": float(ranked.iloc[0]["risk_adjusted_score"]), "levered_irr": finite_or_zero(underwriting["levered_irr"]), "minimum_dscr": finite_or_zero(underwriting["minimum_dscr"])},
-        {"asset": "Residential value-add · London", "equity_required": underwriting["equity_required"] * 0.8, "risk_adjusted_score": float(ranked.iloc[1]["risk_adjusted_score"]), "levered_irr": finite_or_zero(underwriting["levered_irr"]) - 0.015, "minimum_dscr": finite_or_zero(underwriting["minimum_dscr"]) - 0.05},
+        {"asset": "Core-plus logistics · Dubai", "equity_required": underwriting["equity_required"], "risk_adjusted_score": float(ranked.iloc[0]["risk_adjusted_score"]), "levered_irr": display_metric_or_na(underwriting["levered_irr"]), "minimum_dscr": display_metric_or_na(underwriting["minimum_dscr"])},
+        {"asset": "Residential value-add · London", "equity_required": underwriting["equity_required"] * 0.8, "risk_adjusted_score": float(ranked.iloc[1]["risk_adjusted_score"]), "levered_irr": display_metric_or_na(underwriting["levered_irr"] - 0.015) if math.isfinite(float(underwriting["levered_irr"])) else "N/A", "minimum_dscr": display_metric_or_na(underwriting["minimum_dscr"] - 0.05) if math.isfinite(float(underwriting["minimum_dscr"])) else "N/A"},
     ])
     capital = st.number_input("Available equity ($)", min_value=1_000_000, value=25_000_000, step=1_000_000)
     try:
