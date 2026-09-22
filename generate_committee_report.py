@@ -23,7 +23,7 @@ from src.lease import (
     lease_summary,
     underwrite_with_lease_roll,
 )
-from src.presentation import number_or_na, percent_or_na
+from src.presentation import number_or_na, number_or_na_report, percent_or_na, percent_or_na_report
 from src.reconciliation import build_reconciliation_workbook
 
 MODEL_VERSION = "deterministic-core-v0.10"
@@ -200,13 +200,13 @@ def build_screening_package(
 
 | Metric | Result |
 | --- | ---: |
-| Entry cap rate | {underwriting['entry_cap_rate']:.2%} |
-| Levered IRR | {underwriting['levered_irr']:.2%} |
-| Unlevered IRR | {underwriting['unlevered_irr']:.2%} |
-| Equity multiple | {underwriting['equity_multiple']:.2f}x |
-| Minimum DSCR | {underwriting['minimum_dscr']:.2f}x |
-| Unlevered NPV | ${underwriting['unlevered_npv']:,.0f} |
-| Remaining debt at exit | ${underwriting['remaining_debt_at_exit']:,.0f} |
+| Entry cap rate | {percent_or_na_report(underwriting['entry_cap_rate'])} |
+| Levered IRR | {percent_or_na_report(underwriting['levered_irr'], reason='IRR did not converge')} |
+| Unlevered IRR | {percent_or_na_report(underwriting['unlevered_irr'], reason='IRR did not converge')} |
+| Equity multiple | {number_or_na_report(underwriting['equity_multiple'], decimals=2, suffix='x', reason='Equity multiple is not defined')} |
+| Minimum DSCR | {number_or_na_report(underwriting['minimum_dscr'], decimals=2, suffix='x', reason='DSCR is not defined')} |
+| Unlevered NPV | {number_or_na_report(underwriting['unlevered_npv'], prefix='$', reason='NPV is not finite')} |
+| Remaining debt at exit | {number_or_na_report(underwriting['remaining_debt_at_exit'], prefix='$', reason='Remaining debt is not finite')} |
 | Break-even exit cap at 12% hurdle | {percent_or_na(committee['break_even_exit_cap'])} |
 
 ## 6. Risk tails and covenant review

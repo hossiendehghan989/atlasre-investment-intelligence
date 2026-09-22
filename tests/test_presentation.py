@@ -1,7 +1,13 @@
 import pytest
 
 from src.atlasre import DealInputs, underwrite_deal
-from src.presentation import fraction_from_percent, percent_or_na
+from src.presentation import (
+    fraction_from_percent,
+    metric_help,
+    number_or_na_report,
+    percent_or_na,
+    percent_or_na_report,
+)
 
 
 def test_fraction_from_percent_preserves_model_fraction_values():
@@ -31,3 +37,10 @@ def test_percent_or_na_does_not_render_non_finite_values_as_nan():
     assert percent_or_na(0.0599) == "5.99%"
     assert percent_or_na(float("nan")) == "N/A"
     assert percent_or_na(float("inf")) == "N/A"
+
+
+def test_non_finite_metric_helpers_preserve_metric_identity():
+    assert metric_help(float("nan"), "IRR did not converge") == "IRR did not converge"
+    assert metric_help(0.05, "IRR did not converge") is None
+    assert percent_or_na_report(float("nan"), reason="IRR did not converge") == "N/A — IRR did not converge"
+    assert number_or_na_report(float("inf"), suffix="x", reason="DSCR is not defined") == "N/A — DSCR is not defined"

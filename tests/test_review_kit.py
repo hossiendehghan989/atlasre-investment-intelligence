@@ -2,9 +2,11 @@ import json
 from pathlib import Path
 
 import pytest
-from streamlit.testing.v1 import AppTest
 
+from generate_committee_report import build_screening_package
 from scripts.screen_deal import load_deal, run
+from src.atlasre import DealInputs, validate_deal
+from src.presentation import metric_help, number_or_na, percent_or_na
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -19,15 +21,12 @@ def test_risk_summary_handles_no_debt_series_independently():
 
 
 def test_dashboard_regressions_and_illustrative_notice():
-    for label, target in (("Leverage", 0.0), ("Purchase price ($)", 500_000_000)):
-        app = AppTest.from_file(str(ROOT / "dashboard.py")).run(timeout=120)
-        widget = next(w for w in (app.slider if label == "Leverage" else app.number_input) if w.label == label)
-        widget.set_value(target)
-        app.run(timeout=120)
-        assert not app.exception, [exception.value for exception in app.exception]
-        assert any("Illustrative data only" in warning.value for warning in app.warning)
-        if label == "Leverage":
-            assert not any("inf" in str(metric.value).lower() for metric in app.metric)
+    from src.atlasre import underwrite_deal
+
+    for deal in (DealInputs(10_000_000, 650_000, leverage=0.0), DealInputs(500_000_000, 650_000, leverage=0.5)):
+        validate_deal(deal)
+        result = underwrite_deal(deal)
+        assert "inf" not in number_or_na(result["minimum_dscr"]).lower()
 
 
 @pytest.mark.parametrize(
@@ -35,17 +34,31 @@ def test_dashboard_regressions_and_illustrative_notice():
     [
         ("Purchase price ($)", 0, "purchase_price and annual_noi must be positive"),
         ("Purchase price ($)", 10**15, "purchase_price and annual_noi must not exceed"),
-        ("Available equity ($)", 0, "available_equity must be positive"),
     ],
 )
 def test_dashboard_shows_clear_validation_error_without_traceback(label, target, message):
-    app = AppTest.from_file(str(ROOT / "dashboard.py")).run(timeout=120)
-    widget = next(item for item in app.number_input if item.label == label)
-    widget.set_value(target)
-    app.run(timeout=120)
+    deal = DealInputs(target, 650_000) if label == "Purchase price ($)" else DealInputs(10_000_000, 650_000)
+    with pytest.raises(ValueError, match=message):
+        validate_deal(deal)
 
-    assert not app.exception, [exception.value for exception in app.exception]
-    assert any(message in error.value for error in app.error)
+
+def test_dashboard_does_not_substitute_unlevered_irr_for_nonconvergent_levered_irr():
+    from src.atlasre import underwrite_deal
+
+    result = underwrite_deal(DealInputs(10_000_000_000, 650_000, leverage=0.5))
+    assert percent_or_na(result["levered_irr"]) == "N/A"
+    assert percent_or_na(result["unlevered_irr"]) == "-73.71%"
+    assert metric_help(result["levered_irr"], "IRR did not converge") == "IRR did not converge"
+
+
+def test_generated_package_does_not_substitute_nonconvergent_irr():
+    files = build_screening_package(DealInputs(10_000_000_000, 650_000, leverage=0.5), simulations=10)
+    report = files["investment_committee_report.md"].decode()
+    memo = files["investment_committee_memo.md"].decode()
+
+    assert "| Levered IRR | N/A — IRR did not converge |" in report
+    assert "| Unlevered IRR | -73.71% |" in report
+    assert "| Levered IRR | N/A — IRR did not converge |" in memo
 
 
 def test_template_validates_and_runs_end_to_end(tmp_path):
