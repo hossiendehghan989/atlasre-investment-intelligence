@@ -20,6 +20,8 @@ from .validation import integer, non_negative, positive, unit_interval
 
 @dataclass(frozen=True)
 class MonthlyDevelopmentInputs:
+    """Inputs for the monthly development and financing schedule."""
+
     land_cost: float
     hard_cost: float
     soft_cost: float

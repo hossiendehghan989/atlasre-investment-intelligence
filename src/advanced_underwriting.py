@@ -16,6 +16,8 @@ MAX_SIMULATIONS = 20_000
 
 @dataclass(frozen=True)
 class DevelopmentInputs:
+    """Inputs for the compact annual development-feasibility screen."""
+
     land_cost: float
     hard_cost: float
     soft_cost: float

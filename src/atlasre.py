@@ -10,6 +10,8 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import brentq
 
+from .validation import coerced_finite
+
 MAX_CURRENCY_INPUT = 100_000_000_000_000
 MAX_HOLD_YEARS = 100
 MAX_AMORTIZATION_YEARS = 100
@@ -17,6 +19,8 @@ MAX_AMORTIZATION_YEARS = 100
 
 @dataclass(frozen=True)
 class DealInputs:
+    """Explicit annual-acquisition underwriting assumptions."""
+
     purchase_price: float
     annual_noi: float
     hold_years: int = 5
@@ -28,11 +32,6 @@ class DealInputs:
     leverage: float = 0.0
     debt_rate: float = 0.06
     debt_amortization_years: int = 20
-
-
-def _finite(value: float, name: str) -> None:
-    if not isfinite(float(value)):
-        raise ValueError(f"{name} must be finite")
 
 
 def validate_deal(deal: DealInputs) -> None:
@@ -47,7 +46,7 @@ def validate_deal(deal: DealInputs) -> None:
         "leverage",
         "debt_rate",
     ):
-        _finite(getattr(deal, name), name)
+        coerced_finite(getattr(deal, name), name)
     if deal.purchase_price <= 0 or deal.annual_noi <= 0:
         raise ValueError("purchase_price and annual_noi must be positive")
     if deal.purchase_price > MAX_CURRENCY_INPUT or deal.annual_noi > MAX_CURRENCY_INPUT:

@@ -34,6 +34,8 @@ class AuditEvent(TypedDict):
 
 @dataclass(frozen=True)
 class Assumption:
+    """One versioned model assumption with source and review metadata."""
+
     assumption_id: str
     name: str
     value: Any

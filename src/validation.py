@@ -6,6 +6,14 @@ import math
 from numbers import Integral, Real
 
 
+def coerced_finite(value: object, name: str) -> float:
+    """Return a finite float while preserving callers' coercion semantics."""
+    number = float(value)
+    if not math.isfinite(number):
+        raise ValueError(f"{name} must be finite")
+    return number
+
+
 def finite(value: Real, name: str) -> float:
     """Return a finite numeric value or raise a descriptive error."""
     if isinstance(value, bool) or not isinstance(value, Real) or not math.isfinite(float(value)):
@@ -41,4 +49,4 @@ def integer(value: int, name: str, *, minimum: int = 0) -> int:
     return int(value)
 
 
-__all__ = ["finite", "integer", "non_negative", "positive", "unit_interval"]
+__all__ = ["coerced_finite", "finite", "integer", "non_negative", "positive", "unit_interval"]

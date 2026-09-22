@@ -20,6 +20,8 @@ DecisionStatus = Literal["PASSES INITIAL SCREEN", "REVIEW REQUIRED", "REJECT / R
 
 @dataclass(frozen=True)
 class ScreeningThresholds:
+    """Explicit economic and evidence gates for initial case screening."""
+
     hurdle_rate: float = 0.12
     minimum_dscr: float = 1.25
     source_status_required: str = "VERIFIED"
@@ -31,6 +33,8 @@ class ScreeningThresholds:
 
 @dataclass(frozen=True)
 class DealCase:
+    """A named underwriting case and its source-verification evidence."""
+
     deal_id: str
     name: str
     inputs: DealInputs

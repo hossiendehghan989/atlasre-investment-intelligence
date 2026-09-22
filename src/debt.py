@@ -13,6 +13,8 @@ from .validation import integer, non_negative, unit_interval
 
 @dataclass(frozen=True)
 class DebtTerms:
+    """Terms for a single deterministic amortizing debt facility."""
+
     annual_rate: float = 0.07
     amortization_years: int = 25
     term_months: int = 60
