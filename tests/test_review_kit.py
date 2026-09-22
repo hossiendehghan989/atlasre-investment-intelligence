@@ -30,6 +30,24 @@ def test_dashboard_regressions_and_illustrative_notice():
             assert not any("inf" in str(metric.value).lower() for metric in app.metric)
 
 
+@pytest.mark.parametrize(
+    ("label", "target", "message"),
+    [
+        ("Purchase price ($)", 0, "purchase_price and annual_noi must be positive"),
+        ("Purchase price ($)", 10**15, "purchase_price and annual_noi must not exceed"),
+        ("Available equity ($)", 0, "available_equity must be positive"),
+    ],
+)
+def test_dashboard_shows_clear_validation_error_without_traceback(label, target, message):
+    app = AppTest.from_file(str(ROOT / "dashboard.py")).run(timeout=120)
+    widget = next(item for item in app.number_input if item.label == label)
+    widget.set_value(target)
+    app.run(timeout=120)
+
+    assert not app.exception, [exception.value for exception in app.exception]
+    assert any(message in error.value for error in app.error)
+
+
 def test_template_validates_and_runs_end_to_end(tmp_path):
     template_path = ROOT / "docs/templates/deal_template.json"
     payload = json.loads(template_path.read_text())
@@ -65,6 +83,26 @@ def test_invalid_input_is_rejected_clearly(tmp_path, field, value, message):
     path.write_text(json.dumps(payload, allow_nan=True))
     with pytest.raises(ValueError, match=message):
         load_deal(path)
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("hold_years", 10**15, "must not exceed"),
+        ("annual_noi_growth", 1e300, "no greater than 100%"),
+        ("debt_rate", 1e15, "debt rate"),
+        ("debt_amortization_years", 10**15, "must not exceed"),
+        ("simulations", 10**15, "between 1 and"),
+    ],
+)
+def test_hostile_numeric_magnitudes_are_rejected_before_package_generation(tmp_path, field, value, message):
+    payload = json.loads((ROOT / "docs/templates/deal_template.json").read_text())
+    payload[field] = value
+    path = tmp_path / "hostile-numeric.json"
+    path.write_text(json.dumps(payload))
+
+    with pytest.raises(ValueError, match=message):
+        run(path, tmp_path / "review")
 
 
 def test_verified_source_gate_requires_both_evidence(tmp_path):

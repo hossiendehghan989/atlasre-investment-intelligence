@@ -10,6 +10,8 @@ from scipy.optimize import brentq
 
 from .atlasre import DealInputs, _irr, _npv, underwrite_deal, validate_deal
 
+MAX_SIMULATIONS = 20_000
+
 
 @dataclass(frozen=True)
 class DevelopmentInputs:
@@ -90,7 +92,7 @@ def _first_irr_roots(cash_flows: np.ndarray) -> np.ndarray:
     npv_grid = cash_flows @ (1 / discount_factors).T
     left = npv_grid[:, :-1]
     right = npv_grid[:, 1:]
-    candidates = (left == 0) | (np.isfinite(left) & np.isfinite(right) & (left * right < 0))
+    candidates = (left == 0) | (np.isfinite(left) & np.isfinite(right) & (np.signbit(left) != np.signbit(right)))
     has_candidate = candidates.any(axis=1)
     first_index = candidates.argmax(axis=1)
     roots = np.full(cash_flows.shape[0], np.nan, dtype=float)
@@ -175,8 +177,10 @@ def monte_carlo_underwriting(
     prepared interactively.
     """
     validate_deal(deal)
-    if simulations <= 0 or not -1 < correlation < 1:
-        raise ValueError("simulations must be positive and correlation must be between -1 and 1")
+    if isinstance(simulations, bool) or not isinstance(simulations, int) or not 0 < simulations <= MAX_SIMULATIONS:
+        raise ValueError(f"simulations must be an integer between 1 and {MAX_SIMULATIONS}")
+    if not isfinite(float(correlation)) or not -1 < correlation < 1:
+        raise ValueError("correlation must be finite and between -1 and 1")
     rng = np.random.default_rng(seed)
     cov = np.array(
         [

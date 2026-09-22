@@ -1,3 +1,5 @@
+import warnings
+
 import pandas as pd
 import pytest
 
@@ -21,6 +23,14 @@ def test_debt_service_stops_after_loan_is_fully_amortized():
     assert result["cash_flows"][11] == pytest.approx(
         deal.annual_noi * (1 + deal.annual_noi_growth) ** 10
     )
+
+
+def test_very_long_hold_does_not_emit_numeric_overflow_warning():
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        result = underwrite_deal(DealInputs(10_000_000, 650_000, hold_years=100, leverage=0.5))
+
+    assert result["exit_value"] > 0
 
 
 def test_year_one_noi_is_the_input_noi_before_growth():
