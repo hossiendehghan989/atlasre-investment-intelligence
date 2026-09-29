@@ -1,82 +1,102 @@
 # AtlasRE Investment Intelligence
 
-[![CI](https://github.com/hossiendehghan989/atlasre-investment-intelligence/actions/workflows/ci.yml/badge.svg)](https://github.com/hossiendehghan989/atlasre-investment-intelligence/actions/workflows/ci.yml)
+> **Make the assumptions visible. Stress the downside. Explain the decision.**
 
-I built AtlasRE as a personal portfolio project to explore a practical question: **when the assumptions are explicit, can an analyst see how an acquisition model reaches its answer, what could break it, and what still needs to be verified?**
+<p align="center">
+  <a href="https://atlasre-screening-demo.streamlit.app/"><img src="https://img.shields.io/badge/Live%20demo-Streamlit-FF4B4B?logo=streamlit&logoColor=white" alt="Live demo" /></a>
+  <a href="https://github.com/hossiendehghan989/atlasre-investment-intelligence/actions/workflows/ci.yml"><img src="https://github.com/hossiendehghan989/atlasre-investment-intelligence/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <img src="https://img.shields.io/badge/status-research%20prototype-F4B942.svg" alt="Research prototype" />
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-0B8F8C.svg" alt="MIT License" /></a>
+</p>
 
-This is a Python and Streamlit prototype for screening one **ILLUSTRATIVE** real-estate acquisition case. It is not a valuation opinion, an approval system, or investment advice. The point is to make the calculation and the remaining uncertainty easy to inspect.
+AtlasRE is a Python and Streamlit decision-support prototype for screening an **illustrative** real-estate acquisition case. It is designed around a practical question:
 
-**Author:** [Hossein Dehghan](https://github.com/hossiendehghan989) — Industrial Engineering graduate focused on applied AI, data science, energy intelligence, and industrial analytics.
+> **When assumptions are explicit, can a reviewer see how a deal reaches its answer, what could break it, and what still needs verification?**
 
-| Decision summary | Downside view | Review files |
+This is not a valuation opinion, approval system, or investment advice. It is a transparent engineering study of cash-flow modeling, debt constraints, downside analysis, governance, and review-package generation.
+
+## Start here
+
+| If you want to... | Open this |
+| --- | --- |
+| See the workflow quickly | [Launch the illustrative Streamlit demo](https://atlasre-screening-demo.streamlit.app/) |
+| Understand the formulas and controls | [Read the reviewer guide](docs/REVIEWER_GUIDE.md) |
+| Run a real owner-supplied case locally | [Read USING_A_REAL_DEAL](docs/USING_A_REAL_DEAL.md) |
+| Inspect the architecture | [Read ATLASRE_ARCHITECTURE](ATLASRE_ARCHITECTURE.md) |
+| See the project in the broader portfolio | [Open Hossein Dehghan's profile](https://github.com/hossiendehghan989) |
+
+## The default case
+
+The default illustrative case displays **REJECT / REWORK**. Its flags show that the source package is not verified, unlevered NPV is negative, and levered IRR is below the 12% hurdle. The current model outputs are **11.97% levered IRR**, **9.32% unlevered IRR**, **1.70x equity multiple**, and a **$12,193,012 exit value**.
+
+These are reproducible model outputs, not market evidence.
+
+## What the system covers
+
+| Decision layer | Implemented behavior | Important boundary |
 | --- | --- | --- |
-| ![Decision summary](docs/images/decision-summary.png) | ![Downside view](docs/images/downside-risk.png) | ![Review package](docs/images/review-package.png) |
-
-## Why I built it
-
-I wanted a small decision-support system rather than another opaque dashboard. The model keeps the assumptions visible, calculates the debt and cash-flow paths explicitly, shows downside before upside, and records enough context for another person to challenge the result. This is the same working style I use in my other projects, including [GridWise AI](https://github.com/hossiendehghan989/gridwise-ai) and [Tesla Stock Analysis](https://github.com/hossiendehghan989/Tesla-Stock-Analysis): understand the system, make assumptions explicit, build the simplest useful solution, and measure the result.
+| Acquisition | NOI, terminal value, levered/unlevered cash flows, IRR, NPV, equity multiple, DSCR | No tax, capex reserve, or valuation opinion |
+| Debt | Monthly payment, interest, amortization, balloon balance, annual roll-up, LTV/DSCR sizing | No debt stack, hedge, refinance, or covenant model |
+| Downside | Named stress cases and seeded, reproducible Monte Carlo summaries | No historical probability calibration |
+| Governance | Assumption register, source-status gate, lineage, and run fingerprint | No persistent approval ledger or RBAC |
+| Review package | Memo, assumptions, risk summary, debt schedule, lease references, Excel reconciliation, ZIP download | Source status remains `REVIEW REQUIRED` without reviewer evidence |
+| Lease and portfolio | Rent-roll bridge, allocation checks, concentration diagnostics | No complete lease economics or multi-period fund optimizer |
 
 ## Try it in 60 seconds
 
-Run these commands from the repository root on Python 3.11 or 3.12.
+Run on Python 3.11 or 3.12:
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements.lock && streamlit run dashboard.py
+python -m pip install -r requirements.lock
+streamlit run dashboard.py
 ```
 
-Open the local URL printed by Streamlit. Change an assumption, inspect the downside flags, select **Prepare review files**, and download the ZIP or formula-based Excel reconciliation workbook. Every bundled input and output remains **ILLUSTRATIVE**. The dashboard and CLI review package both use 5,000 seeded downside simulations.
+The [live demo](https://atlasre-screening-demo.streamlit.app/) uses illustrative data, has no authentication, is not for sensitive information, and may take a short time to wake if idle.
 
-For an owner-supplied case, run locally with `python scripts/screen_deal.py path/to/deal.json --output deal-review`; start from [the JSON template](docs/templates/deal_template.json) and read [USING_A_REAL_DEAL](docs/USING_A_REAL_DEAL.md).
+For an owner-supplied case:
 
-**Live demo:** [atlasre-screening-demo.streamlit.app](https://atlasre-screening-demo.streamlit.app/) — uses ILLUSTRATIVE data, has no authentication, is not for sensitive data, and the free app may take a short time to wake up if it has been idle.
+```bash
+python scripts/screen_deal.py path/to/deal.json --output deal-review
+```
 
-## What the default case says
+Start from the [JSON template](docs/templates/deal_template.json) and read [USING_A_REAL_DEAL](docs/USING_A_REAL_DEAL.md) first.
 
-The default illustrative case displays **REJECT / REWORK**. Its flags show that the source package is not verified, unlevered NPV is negative, and levered IRR is below the 12% hurdle. The current figures are **11.97% levered IRR**, **9.32% unlevered IRR**, **1.70x equity multiple**, and a **$12,193,012 exit value**. These are reproducible model outputs, not market evidence.
+## What to inspect in the code
 
-## What is included
+The project is deliberately more than a dashboard. The core flow is:
 
-| Area | Implemented behavior | Boundary |
-| --- | --- | --- |
-| Acquisition | Annual NOI, terminal value, levered and unlevered cash flows, IRR, NPV, equity multiple, and DSCR | No tax, capex reserve, property-level operating statement, or valuation opinion |
-| Debt | Monthly payment, interest, amortization, balloon balance, annual debt roll-up, and LTV/DSCR sizing | No debt stack, hedge, refinance, or loan-document covenant model |
-| Downside | Named stress cases plus seeded, reproducible Monte Carlo risk summaries | No historical probability calibration |
-| Governance | Assumption register, source-status gate, lineage, and run fingerprint | No persistent approval ledger, RBAC, or retention service |
-| Review package | Memo, assumptions, risk summary, annual debt schedule, lease references, Excel reconciliation workbook, and ZIP download | Source status remains `REVIEW REQUIRED` unless the caller supplies reviewer and source reference |
-| Excel reconciliation | Live formulas for annual NOI, monthly debt, IRR, NPV, PMT, IPMT, PPMT, equity multiple, and formula-to-model differences | Workbook must be recalculated in Excel or LibreOffice; it does not validate source documents |
-| Lease and portfolio | Illustrative rent-roll bridge, allocation checks, and concentration diagnostics | No complete lease economics, tenant-credit evidence, or multi-period fund optimizer |
+```text
+Assumptions → Validation → Cash flows → Debt schedule → Downside analysis
+           → Governance gates → Review memo + Excel reconciliation package
+```
 
-## Why this is code instead of another spreadsheet
+- `src/atlasre.py` — core acquisition underwriting
+- `src/advanced_underwriting.py` — seeded simulation, stress cases, and risk summaries
+- `src/debt.py` — monthly debt schedules and sizing
+- `src/reconciliation.py` — formula-based Excel reconciliation workbook
+- `generate_committee_report.py` — review-package generator
+- `dashboard.py` — Streamlit interface
+- `tests/` — regression and independent cross-checks
+- `docs/` — reviewer, demo, deployment, and sample materials
 
-A spreadsheet can implement many of the same calculations. I used code here because I wanted the assumptions, validation, tests, downside cases, and generated review files to live together and be repeatable. The Excel workbook is still included, but it is a reconciliation surface rather than the only source of truth.
+## Why code instead of another spreadsheet?
 
-The supplied annual NOI is year-one NOI. Growth begins in year two. Exit value is final-year NOI divided by exit cap rate. Acquisition and selling costs are percentages of price and exit value, respectively. The core loan is a single amortizing loan calculated monthly. See the [reviewer guide](docs/REVIEWER_GUIDE.md) for the formula map and reconciliation steps.
-
-## What this project does not claim
-
-This is a single-user, local prototype. It has no authentication, immutable audit store, source-document ingestion, live market data, OCR, accounting integration, tax model, FX model, complete lease economics, construction-to-permanent debt, mezzanine or preferred equity, persistent approvals, or production authorization controls. The seeded simulation is reproducible, but it is not calibrated to observed market outcomes. No output is investment advice or an approval.
+A spreadsheet can implement many of these calculations. AtlasRE uses code so that assumptions, validation, tests, downside cases, generated review files, and run fingerprints live together and remain repeatable. The Excel workbook is included as a reconciliation surface—not as the only source of truth.
 
 ## Testing and deployment
 
-CI installs `requirements.lock`, runs `ruff check .`, and runs `python -m pytest -q` on every push and pull request. The current package benchmark and reproducibility evidence are documented in [CHANGELOG.md](CHANGELOG.md). For Streamlit Community Cloud settings and deployment steps, see [DEPLOY.md](DEPLOY.md). The generated [illustrative sample package](docs/sample_output/README_ILLUSTRATIVE.md) and [demo script](docs/DEMO_SCRIPT.md) are available for review.
+CI installs the locked dependencies, runs Ruff, and executes the test suite on every push and pull request. For deployment details, see [DEPLOY.md](DEPLOY.md). For the formula map and reconciliation steps, see the [reviewer guide](docs/REVIEWER_GUIDE.md).
 
-## Repository layout
+## Honest limitations
 
-```text
-src/atlasre.py                 core acquisition underwriting
-src/advanced_underwriting.py   seeded simulation, stress cases, and risk summaries
-src/debt.py                    monthly debt schedules and debt sizing
-src/reconciliation.py          formula-based Excel reconciliation workbook
-generate_committee_report.py   review-package generator
-dashboard.py                   Streamlit interface
-tests/                         regression and independent cross-checks
-docs/                          indexed reviewer, demo, deployment, and sample materials
-```
-
-For the full document map, see [docs/README.md](docs/README.md).
+This is a single-user, local prototype. It has no authentication, immutable audit store, source-document ingestion, live market data, OCR, accounting integration, tax model, FX model, complete lease economics, persistent approvals, or production authorization controls. The seeded simulation is reproducible but not calibrated to observed market outcomes. No output is investment advice or an approval.
 
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+## Author
+
+Built by [Hossein Dehghan](https://github.com/hossiendehghan989) at the intersection of **industrial engineering, applied AI, decision support, and transparent financial modeling**.
